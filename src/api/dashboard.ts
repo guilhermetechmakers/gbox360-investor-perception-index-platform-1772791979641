@@ -36,7 +36,14 @@ export const dashboardApi = {
         watched: MOCK_WATCHED,
         ipiChanges: MOCK_IPI_CHANGES,
         alerts: MOCK_ALERTS,
-        companies: [],
+        companies: [
+          { id: "1", name: "Acme Corp", ticker: "ACME" },
+          { id: "2", name: "TechFlow Inc", ticker: "TFLW" },
+          { id: "3", name: "Global Industries", ticker: "GLB" },
+          { id: "4", name: "Finance Holdings", ticker: "FNCE" },
+          { id: "5", name: "HealthFirst Corp", ticker: "HLTH" },
+          { id: "6", name: "Energy Solutions", ticker: "ENRG" },
+        ],
       }
     }
   },

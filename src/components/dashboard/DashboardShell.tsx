@@ -5,6 +5,8 @@ import { AlertsPanel } from "./AlertsPanel"
 import { TimelinePreview } from "./TimelinePreview"
 import { DataVisualizationStub } from "./DataVisualizationStub"
 import { DashboardFloatingPromoCard } from "./DashboardFloatingPromoCard"
+import { QuickActionsCard } from "./QuickActionsCard"
+import { RecommendedCompaniesCard } from "./RecommendedCompaniesCard"
 import { useDashboard } from "@/hooks/useDashboard"
 import { AnimatedPage } from "@/components/AnimatedPage"
 import { cn } from "@/lib/utils"
@@ -31,14 +33,22 @@ export function DashboardShell({ className }: DashboardShellProps) {
     return Array.isArray(a) ? a : []
   }, [data?.alerts])
 
+  const recommendedCompanies = useMemo(() => {
+    const c = data?.companies
+    return Array.isArray(c) ? c.slice(0, 6) : []
+  }, [data?.companies])
+
   return (
-    <AnimatedPage className={cn("space-y-8", className)}>
+    <AnimatedPage className={cn("mx-auto max-w-[1000px] space-y-8", className)}>
       <div>
-        <h1 className="font-display text-2xl font-semibold">Dashboard</h1>
-        <p className="text-muted-foreground">
+        <h1 className="font-display text-2xl font-semibold text-foreground">Dashboard</h1>
+        <p className="mt-1 text-muted-foreground">
           Your watchlist and recent IPI shifts.
         </p>
       </div>
+
+      {/* Quick actions */}
+      <QuickActionsCard watchedCompanies={watched} />
 
       {/* Main grid: Watchlist + IPI Changes + Alerts */}
       <div className="grid gap-6 lg:grid-cols-3">
@@ -52,6 +62,11 @@ export function DashboardShell({ className }: DashboardShellProps) {
           <AlertsPanel alerts={alerts} isLoading={isLoading} />
         </div>
       </div>
+
+      {/* Recommended company cards */}
+      {recommendedCompanies.length > 0 && (
+        <RecommendedCompaniesCard companies={recommendedCompanies} />
+      )}
 
       {/* IPI Changes + Timeline + Promo */}
       <div className="grid gap-6 lg:grid-cols-3">

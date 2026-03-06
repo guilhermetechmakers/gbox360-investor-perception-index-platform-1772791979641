@@ -21,6 +21,12 @@ export function Navbar() {
           >
             Features
           </Link>
+          <Link
+            to="/about-help"
+            className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+          >
+            About & Help
+          </Link>
           <Link to="/auth?tab=login">
             <Button variant="ghost">Log in</Button>
           </Link>

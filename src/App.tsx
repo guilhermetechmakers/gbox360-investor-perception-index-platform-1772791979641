@@ -23,6 +23,7 @@ import AdminAuditLogs from "@/pages/AdminAuditLogs"
 import AdminDataReplay from "@/pages/AdminDataReplay"
 import AdminUserManagement from "@/pages/AdminUserManagement"
 import NotFound from "@/pages/NotFound"
+import AboutHelp from "@/pages/AboutHelp"
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -42,6 +43,7 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/about-help" element={<AboutHelp />} />
           <Route path="/auth" element={<UnifiedAuthPage />} />
           <Route path="/login" element={<Navigate to="/auth?tab=login" replace />} />
           <Route path="/signup" element={<Navigate to="/auth?tab=signup" replace />} />

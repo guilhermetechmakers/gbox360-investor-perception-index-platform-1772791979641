@@ -21,8 +21,11 @@ export default function CompanyView() {
 
   const { data: company, isLoading: companyLoading } = useCompanyDetail(id)
   const { data: ipi, isLoading: ipiLoading } = useIPICurrent(id, validWindow)
-  const { data: narratives, isLoading: narrativesLoading } = useTopNarratives(id, validWindow, 3)
-  const { data: events, isLoading: eventsLoading } = useIPIEvents(id, validWindow)
+  const { data: narrativesData, isLoading: narrativesLoading } = useTopNarratives(id, validWindow, 3)
+  const { data: eventsData, isLoading: eventsLoading } = useIPIEvents(id, validWindow)
+
+  const narratives = Array.isArray(narrativesData) ? narrativesData : []
+  const events = Array.isArray(eventsData) ? eventsData : []
 
   const handleWindowChange = (value: string) => {
     setSearchParams((prev) => {
@@ -43,7 +46,7 @@ export default function CompanyView() {
 
   return (
     <AnimatedPage>
-      <div className="space-y-6">
+      <div className="mx-auto max-w-[1000px] space-y-6">
         <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="font-display text-2xl font-semibold">
@@ -118,7 +121,7 @@ export default function CompanyView() {
                 <Skeleton className="h-20 w-full" />
                 <Skeleton className="h-20 w-full" />
               </div>
-            ) : narratives && narratives.length > 0 ? (
+            ) : narratives.length > 0 ? (
               <ul className="space-y-4">
                 {narratives.map((n) => (
                   <li key={n.topic_id}>
@@ -150,7 +153,7 @@ export default function CompanyView() {
           <CardContent>
             {eventsLoading ? (
               <Skeleton className="h-48 w-full" />
-            ) : events && events.length > 0 ? (
+            ) : events.length > 0 ? (
               <div className="space-y-2">
                 {events.slice(0, 10).map((ev) => (
                   <Card key={ev.event_id} className="flex items-center justify-between p-4">
