@@ -159,6 +159,26 @@ export function useAdminUserResetPassword() {
   })
 }
 
+export function useAdminUserUpdateRoles() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      userId,
+      tenantRoles,
+    }: {
+      userId: string
+      tenantRoles: { tenantId: string; roleId: string }[]
+    }) => adminApi.updateUserRoles(userId, tenantRoles),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "users"] })
+      toast.success("Roles updated")
+    },
+    onError: (error: Error) => {
+      toast.error(error.message ?? "Failed to update roles")
+    },
+  })
+}
+
 export function useAdminUserExport() {
   return useMutation({
     mutationFn: (params: AdminUsersParams & { format?: "csv" | "json" }) =>

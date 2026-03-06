@@ -1,4 +1,4 @@
-import { useParams, Link } from "react-router-dom"
+import { useParams, Link, useSearchParams } from "react-router-dom"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -9,18 +9,28 @@ import {
 } from "@/hooks/useIPI"
 import { useCompany as useCompanyDetail } from "@/hooks/useCompanies"
 import { AnimatedPage } from "@/components/AnimatedPage"
+import { CompanyTimeWindowSelect } from "@/components/dashboard/CompanyTimeWindowSelect"
 import { ArrowDownRight, ArrowUpRight, Download, Flag, FileJson } from "lucide-react"
-
-const WINDOW = "1W"
 
 export default function CompanyView() {
   const { companyId } = useParams<{ companyId: string }>()
+  const [searchParams, setSearchParams] = useSearchParams()
   const id = companyId ?? ""
+  const windowParam = searchParams.get("window") ?? "1W"
+  const validWindow = ["1D", "1W", "2W", "1M"].includes(windowParam) ? windowParam : "1W"
 
   const { data: company, isLoading: companyLoading } = useCompanyDetail(id)
-  const { data: ipi, isLoading: ipiLoading } = useIPICurrent(id, WINDOW)
-  const { data: narratives, isLoading: narrativesLoading } = useTopNarratives(id, WINDOW, 3)
-  const { data: events, isLoading: eventsLoading } = useIPIEvents(id, WINDOW)
+  const { data: ipi, isLoading: ipiLoading } = useIPICurrent(id, validWindow)
+  const { data: narratives, isLoading: narrativesLoading } = useTopNarratives(id, validWindow, 3)
+  const { data: events, isLoading: eventsLoading } = useIPIEvents(id, validWindow)
+
+  const handleWindowChange = (value: string) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev)
+      next.set("window", value)
+      return next
+    })
+  }
 
   if (companyLoading || !company) {
     return (
@@ -39,10 +49,16 @@ export default function CompanyView() {
             <h1 className="font-display text-2xl font-semibold">
               {company.name} ({company.ticker})
             </h1>
-            <p className="text-muted-foreground">Time window: {WINDOW}</p>
+            <div className="mt-1 flex items-center gap-2">
+              <CompanyTimeWindowSelect
+                value={validWindow}
+                onChange={handleWindowChange}
+              />
+              <span className="text-sm text-muted-foreground">time window</span>
+            </div>
           </div>
-          <div className="flex gap-2">
-            <Link to={`/dashboard/company/${id}/drill-down`}>
+          <div className="flex flex-wrap gap-2">
+            <Link to={`/dashboard/company/${id}/drill-down?window=${validWindow}`}>
               <Button variant="outline">Why did this move?</Button>
             </Link>
             <Button variant="outline" size="icon" title="Export">

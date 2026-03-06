@@ -1,7 +1,8 @@
 import { useState } from "react"
-import { Link, Outlet, useNavigate } from "react-router-dom"
+import { Link, Outlet, useNavigate, useLocation } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
   LayoutDashboard,
   Building2,
@@ -16,6 +17,7 @@ import {
 import { cn } from "@/lib/utils"
 import { useSignOut } from "@/hooks/useAuth"
 import { useCurrentUser } from "@/hooks/useAuth"
+import { QuickCompanySelector } from "@/components/dashboard"
 
 const navItems = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -29,8 +31,10 @@ export function DashboardLayout() {
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const navigate = useNavigate()
+  const location = useLocation()
   const signOut = useSignOut()
-  const { isAdmin } = useCurrentUser()
+  const { isAdmin, user } = useCurrentUser()
+  const isDashboardRoute = location.pathname.startsWith("/dashboard")
 
   const handleSignOut = () => {
     signOut.mutate(undefined, {
@@ -64,19 +68,22 @@ export function DashboardLayout() {
         </div>
         <ScrollArea className="flex-1 py-4">
           <nav className="flex flex-col gap-1 px-2">
-            {navItems.map(({ to, label, icon: Icon }) => (
+            {navItems.map(({ to, label, icon: Icon }) => {
+              const isActive = to === "/dashboard" ? location.pathname === "/dashboard" : location.pathname.startsWith(to)
+              return (
               <Link
                 key={to}
                 to={to}
                 className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
+                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-muted hover:text-foreground",
+                  isActive ? "bg-muted text-foreground" : "text-muted-foreground",
                   collapsed && "justify-center px-2"
                 )}
               >
                 <Icon className="h-5 w-5 shrink-0" />
                 {!collapsed && <span>{label}</span>}
               </Link>
-            ))}
+            )})}
             {isAdmin && (
               <Link
                 to="/admin-dashboard"
@@ -174,6 +181,18 @@ export function DashboardLayout() {
       </aside>
 
       <main className="flex-1 pt-14 md:pt-0 md:pl-0">
+        {isDashboardRoute && (
+          <div className="sticky top-14 z-20 flex h-14 items-center justify-between gap-4 border-b border-border bg-card px-4 md:top-0 md:px-6">
+            <QuickCompanySelector placeholder="Search companies..." className="max-w-[280px]" />
+            <div className="flex items-center gap-2">
+              <Avatar className="h-8 w-8">
+                <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                  {user?.email?.slice(0, 2).toUpperCase() ?? "U"}
+                </AvatarFallback>
+              </Avatar>
+            </div>
+          </div>
+        )}
         <div className="min-h-screen p-4 md:p-6">
           <Outlet />
         </div>

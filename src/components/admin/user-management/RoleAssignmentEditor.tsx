@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { useAdminTenants, useAdminRoles } from "@/hooks/useAdmin"
+import { useAdminTenants, useAdminRoles, useAdminUserUpdateRoles } from "@/hooks/useAdmin"
 import { safeArray } from "@/lib/data-guard"
 import type { AdminUser } from "@/types/admin"
 import { cn } from "@/lib/utils"
@@ -52,6 +52,7 @@ export function RoleAssignmentEditor({
 }: RoleAssignmentEditorProps) {
   const { data: tenants = [] } = useAdminTenants()
   const { data: roles = [] } = useAdminRoles()
+  const updateRolesMutation = useAdminUserUpdateRoles()
 
   const tenantsList = safeArray(tenants)
   const rolesList = safeArray(roles)
@@ -127,9 +128,25 @@ export function RoleAssignmentEditor({
   }
 
   const onSubmit = (values: RoleFormValues) => {
-    onSave?.(values.tenantRoles)
-    reset()
-    onOpenChange(false)
+    const validRoles = (values.tenantRoles ?? []).filter(
+      (tr) => tr.tenantId && tr.roleId
+    )
+    if (user?.id && validRoles.length > 0) {
+      updateRolesMutation.mutate(
+        { userId: user.id, tenantRoles: validRoles },
+        {
+          onSuccess: () => {
+            onSave?.(values.tenantRoles)
+            reset()
+            onOpenChange(false)
+          },
+        }
+      )
+    } else {
+      onSave?.(values.tenantRoles)
+      reset()
+      onOpenChange(false)
+    }
   }
 
   const handleOpenChange = (next: boolean) => {
@@ -208,7 +225,9 @@ export function RoleAssignmentEditor({
             <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit">Save</Button>
+            <Button type="submit" disabled={updateRolesMutation.isPending}>
+              {updateRolesMutation.isPending ? "Saving…" : "Save"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

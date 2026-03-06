@@ -1,6 +1,7 @@
 export { authApi } from "./auth"
 export { adminApi } from "./admin"
 export { companiesApi } from "./companies"
+export { dashboardApi } from "./dashboard"
 export { ipiApi } from "./ipi"
 export { subscriptionApi } from "./subscription"
 export { invoiceApi } from "./invoice"

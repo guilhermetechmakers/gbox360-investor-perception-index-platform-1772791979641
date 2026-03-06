@@ -1,4 +1,5 @@
 import { useForm } from "react-hook-form"
+import { useEffect } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import {
@@ -131,6 +132,20 @@ export function InviteUserModal({
 
   const tenantRoles = watch("tenantRoles") ?? []
   const ssoEnabled = watch("ssoEnabled")
+
+  useEffect(() => {
+    if (open) {
+      const defaultExpiry = format(addDays(new Date(), DEFAULT_EXPIRY_DAYS), "yyyy-MM-dd")
+      reset({
+        email: "",
+        name: "",
+        tenantRoles: [{ tenantId: "", roleId: "" }],
+        ssoEnabled: false,
+        expiresAt: defaultExpiry,
+        message: "",
+      })
+    }
+  }, [open, reset])
 
   const addTenantRole = () => {
     setValue("tenantRoles", [...tenantRoles, { tenantId: "", roleId: "" }])

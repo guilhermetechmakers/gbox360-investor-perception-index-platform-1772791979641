@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import { AnimatedPage } from "@/components/AnimatedPage"
-import { Users, UserPlus, ChevronLeft, ChevronRight } from "lucide-react"
+import { Users, UserPlus, ChevronLeft, ChevronRight, UsersRound } from "lucide-react"
 import {
   useAdminUsers,
   useAdminTenants,
@@ -307,8 +307,23 @@ export default function AdminUserManagement() {
                     ))}
                   </div>
                 ) : users.length === 0 ? (
-                  <div className="rounded-lg border border-dashed border-border py-12 text-center text-muted-foreground">
-                    No users match the current filters.
+                  <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-muted/20 py-16 px-6 text-center">
+                    <div className="rounded-full bg-muted p-4">
+                      <UsersRound className="h-10 w-10 text-muted-foreground" aria-hidden />
+                    </div>
+                    <h3 className="mt-4 font-display text-lg font-semibold text-foreground">
+                      No users match the current filters
+                    </h3>
+                    <p className="mt-2 max-w-sm text-sm text-muted-foreground">
+                      Try adjusting tenant, role, or status filters, or search by name or email.
+                    </p>
+                    <Button
+                      variant="outline"
+                      className="mt-6"
+                      onClick={clearFilters}
+                    >
+                      Clear filters
+                    </Button>
                   </div>
                 ) : (
                   <>

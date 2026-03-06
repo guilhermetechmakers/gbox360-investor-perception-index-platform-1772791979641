@@ -23,3 +23,12 @@ export function useCompany(id: string) {
     enabled: !!id,
   })
 }
+
+export function useCompanySearch(query: string, enabled: boolean = true) {
+  return useQuery({
+    queryKey: companyKeys.search(query),
+    queryFn: () => companiesApi.search(query),
+    enabled: enabled && query.length >= 2,
+    staleTime: 1000 * 60,
+  })
+}

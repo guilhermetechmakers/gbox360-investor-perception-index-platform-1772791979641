@@ -279,6 +279,20 @@ export const adminApi = {
     await api.post(`/admin/users/${id}/reset-password`, {})
   },
 
+  updateUserRoles: async (
+    userId: string,
+    tenantRoles: { tenantId: string; roleId: string }[]
+  ): Promise<void> => {
+    try {
+      await api.put(`/admin/users/${userId}/roles`, { tenantRoles })
+    } catch {
+      if (import.meta.env.DEV) {
+        return
+      }
+      throw new Error("Failed to update user roles")
+    }
+  },
+
   exportUsers: async (params: AdminUsersParams & { format?: "csv" | "json" }): Promise<{ url: string }> => {
     try {
       const q = new URLSearchParams()
