@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from "react"
+import { useNavigate } from "react-router-dom"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { AnimatedPage } from "@/components/AnimatedPage"
 import { DataAccessGuard } from "@/components/admin/DataAccessGuard"
@@ -25,10 +26,11 @@ import {
   useAdminDataReplayJobProgress,
   useAdminDataReplayAuditLogs,
 } from "@/hooks/useAdmin"
-import type { PreflightResult, DryRunResult } from "@/types/admin"
+import type { PreflightResult, DryRunResult, ReplayJob } from "@/types/admin"
 import { safeArray } from "@/lib/data-guard"
 import { format, subDays } from "date-fns"
 import { RotateCcw } from "lucide-react"
+import { toast } from "sonner"
 
 function getDefaultTimeWindow(): TimeWindow {
   const end = new Date()
@@ -40,11 +42,13 @@ function getDefaultTimeWindow(): TimeWindow {
 }
 
 export default function AdminDataReplay() {
+  const navigate = useNavigate()
   const defaultWindow = getDefaultTimeWindow()
   const [tenantId, setTenantId] = useState<string>("")
   const [timeWindow, setTimeWindow] = useState<TimeWindow>(defaultWindow)
   const [dryRunResult, setDryRunResult] = useState<PreflightResult | DryRunResult | null>(null)
   const [activeJobId, setActiveJobId] = useState<string | null>(null)
+  const [isPaused, setIsPaused] = useState(false)
 
   const { data: tenants = [] } = useAdminTenants()
   const tenantsList = safeArray(tenants)
@@ -129,8 +133,36 @@ export default function AdminDataReplay() {
     const status = (progressData as { status?: string })?.status
     if (status === "completed" || status === "failed" || status === "cancelled") {
       setActiveJobId(null)
+      setIsPaused(false)
     }
   }, [progressData])
+
+  const handlePause = useCallback(() => {
+    setIsPaused(true)
+    toast.info("Pause requested. Backend support for pause/resume can be added when available.")
+  }, [])
+
+  const handleResume = useCallback(() => {
+    setIsPaused(false)
+    toast.info("Resume requested. Backend support for pause/resume can be added when available.")
+  }, [])
+
+  const handleCancel = useCallback(() => {
+    setActiveJobId(null)
+    setIsPaused(false)
+    toast.info("Cancel requested. Backend support for cancel can be added when available.")
+  }, [])
+
+  const handleViewJobDetails = useCallback(
+    (job: ReplayJob) => {
+      const params = new URLSearchParams()
+      if (job.tenantId) params.set("tenantId", job.tenantId)
+      if (job.id) params.set("relatedJobId", job.id)
+      params.set("eventTypes", "REPLAY")
+      navigate(`/admin/audit-logs?${params.toString()}`)
+    },
+    [navigate]
+  )
 
   const progressPercent = (progressData as { progressPercent?: number })?.progressPercent ?? 0
   const progressStatus = (progressData as { status?: string })?.status ?? "idle"
@@ -143,13 +175,13 @@ export default function AdminDataReplay() {
   return (
     <DataAccessGuard permission="audit_logs">
       <AnimatedPage>
-        <div className="mx-auto max-w-5xl space-y-8">
+        <div className="mx-auto max-w-[1000px] space-y-8">
           {/* Header */}
           <div>
-            <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground">
+            <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
               Data Replay
             </h1>
-            <p className="text-muted-foreground">
+            <p className="mt-1 text-muted-foreground">
               Replay append-only NarrativeEvent streams for tenant, company, and time window.
               Dry-run to simulate; execute to run the live replay.
             </p>
@@ -199,8 +231,12 @@ export default function AdminDataReplay() {
                 <ReplayControls
                   onDryRun={runDryRun}
                   onExecute={runExecute}
+                  onPause={handlePause}
+                  onResume={handleResume}
+                  onCancel={handleCancel}
                   isDryRunPending={runMutation.isPending}
                   isExecutePending={runMutation.isPending}
+                  isPaused={isPaused}
                   isRunning={progressStatus === "running" || progressStatus === "queued"}
                   disabled={!tenantId || !timeWindow.start || !timeWindow.end || timeWindow.start > timeWindow.end}
                 />
@@ -231,6 +267,7 @@ export default function AdminDataReplay() {
           <div className="grid gap-6 lg:grid-cols-2">
             <JobHistoryList
               jobs={jobs}
+              onViewDetails={handleViewJobDetails}
               isLoading={jobsLoading}
             />
             <div className="space-y-6">

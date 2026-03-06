@@ -37,7 +37,7 @@ export function ReplayControls({
         variant="outline"
         onClick={onDryRun}
         disabled={!canDryRun}
-        className="gap-2"
+        className="gap-2 transition-transform hover:scale-[1.02] hover:shadow-md focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         aria-label="Run dry-run simulation"
       >
         <TestTube className="h-4 w-4" aria-hidden />
@@ -46,7 +46,7 @@ export function ReplayControls({
       <Button
         onClick={onExecute}
         disabled={!canExecute}
-        className="gap-2"
+        className="gap-2 bg-primary text-primary-foreground transition-transform hover:scale-[1.02] hover:shadow-md focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         aria-label="Execute replay"
       >
         <Play className="h-4 w-4" aria-hidden />
@@ -57,7 +57,7 @@ export function ReplayControls({
           variant="outline"
           size="sm"
           onClick={isPaused ? onResume : onPause}
-          className="gap-2"
+          className="gap-2 transition-transform hover:scale-[1.02] hover:shadow focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           aria-label={isPaused ? "Resume replay" : "Pause replay"}
         >
           {isPaused ? (
@@ -78,7 +78,7 @@ export function ReplayControls({
           variant="destructive"
           size="sm"
           onClick={onCancel}
-          className="gap-2"
+          className="gap-2 transition-transform hover:scale-[1.02] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           aria-label="Cancel replay"
         >
           <Square className="h-4 w-4" aria-hidden />

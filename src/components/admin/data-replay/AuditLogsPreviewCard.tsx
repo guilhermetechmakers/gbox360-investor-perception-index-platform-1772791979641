@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { FileText, ExternalLink } from "lucide-react"
+import { FileText, ExternalLink, FileJson } from "lucide-react"
 import { format } from "date-fns"
 import type { AuditLogPreview } from "@/types/admin"
 import { cn } from "@/lib/utils"
@@ -57,6 +57,21 @@ export function AuditLogsPreviewCard({
                   <p className="font-mono text-xs text-muted-foreground">
                     {log.timestamp ? format(new Date(log.timestamp), "PPp") : "—"}
                   </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  {log.payloadRef ? (
+                    <Link to={`/dashboard/payload/${log.payloadRef}`}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 gap-1"
+                        aria-label={`View raw payload ${log.payloadRef}`}
+                      >
+                        <FileJson className="h-4 w-4" aria-hidden />
+                        View payload
+                      </Button>
+                    </Link>
+                  ) : null}
                 </div>
               </li>
             ))}

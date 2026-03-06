@@ -17,7 +17,7 @@ import Settings from "@/pages/Settings"
 import Analytics from "@/pages/Analytics"
 import SubscriptionManagement from "@/pages/SubscriptionManagement"
 import SubscriptionCheckout from "@/pages/SubscriptionCheckout"
-import SubscriptionInvoices from "@/pages/SubscriptionInvoices"
+import TransactionHistory from "@/pages/TransactionHistory"
 import AdminDashboard from "@/pages/AdminDashboard"
 import AdminAuditLogs from "@/pages/AdminAuditLogs"
 import AdminDataReplay from "@/pages/AdminDataReplay"
@@ -55,7 +55,7 @@ function App() {
             <Route path="analytics" element={<Analytics />} />
             <Route path="subscription-management" element={<SubscriptionManagement />} />
             <Route path="subscription-management/checkout" element={<SubscriptionCheckout />} />
-            <Route path="subscription-management/invoices" element={<SubscriptionInvoices />} />
+            <Route path="subscription-management/invoices" element={<TransactionHistory />} />
           </Route>
           <Route path="/admin-dashboard" element={<AdminLayout />}>
             <Route index element={<AdminDashboard />} />

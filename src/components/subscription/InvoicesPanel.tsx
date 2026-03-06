@@ -1,7 +1,8 @@
+import { Link } from "react-router-dom"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Download, FileText } from "lucide-react"
+import { Download, FileText, ArrowRight } from "lucide-react"
 import { useInvoices } from "@/hooks/useSubscription"
 import { safeArray } from "@/lib/data-guard"
 import { format } from "date-fns"
@@ -18,13 +19,26 @@ export function InvoicesPanel() {
     <>
       <Card className="card-elevated rounded-[1rem]">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 font-display text-lg">
-            <FileText className="h-5 w-5" />
-            Invoices & transactions
-          </CardTitle>
-          <CardDescription>
-            Download PDF or CSV for your records.
-          </CardDescription>
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <CardTitle className="flex items-center gap-2 font-display text-lg">
+                <FileText className="h-5 w-5" />
+                Invoices & transactions
+              </CardTitle>
+              <CardDescription>
+                Download PDF or CSV for your records.
+              </CardDescription>
+            </div>
+            <Button variant="outline" size="sm" asChild>
+              <Link
+                to="/dashboard/subscription-management/invoices"
+                className="gap-1"
+              >
+                View all
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (
