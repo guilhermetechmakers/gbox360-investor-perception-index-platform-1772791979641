@@ -1,11 +1,16 @@
 import { api } from "@/lib/api"
+import { mockCalculate, mockSandbox } from "@/lib/ipi-mock"
 import type {
   IPIScore,
   IPITimeseriesPoint,
   IPISimulateInput,
+  IPICalculateInput,
+  IPICalculateResult,
+  IPISandboxInput,
+  IPISandboxResult,
 } from "@/types/ipi"
 import type { NarrativeSummary } from "@/types/narrative"
-import type { NarrativeEvent } from "@/types/narrative"
+import type { NarrativeEvent, NarrativeEventCanonical } from "@/types/narrative"
 
 export const ipiApi = {
   getCurrent: (
@@ -45,13 +50,83 @@ export const ipiApi = {
     api.post<IPIScore>("/ipi/simulate", input),
 
   /**
-   * Timeline data for company with optional date/type filters.
-   * Gracefully returns [] if endpoint unavailable.
+   * POST /ipi/calculate - Compute IPI with optional weights.
+   * Falls back to client-side mock when API unavailable.
    */
+  calculate: async (input: IPICalculateInput): Promise<IPICalculateResult> => {
+    try {
+      const res = await api.post<IPICalculateResult>("/ipi/calculate", {
+        companyId: input.companyId,
+        timeWindowStart: input.timeWindowStart,
+        timeWindowEnd: input.timeWindowEnd,
+        weights: input.weights,
+      })
+      return res ?? mockCalculate(input)
+    } catch {
+      return mockCalculate(input)
+    }
+  },
+
   /**
-   * Request export of IPI data for a company/time window.
-   * Returns presigned URL when ready. Falls back to mock when API unavailable.
+   * POST /ipi/sandbox - Run simulations with different weights.
+   * Falls back to client-side mock when API unavailable.
    */
+  sandbox: async (input: IPISandboxInput): Promise<IPISandboxResult[]> => {
+    try {
+      const res = await api.post<IPISandboxResult[] | { data: IPISandboxResult[] }>(
+        "/ipi/sandbox",
+        input
+      )
+      const list = Array.isArray(res) ? res : (res as { data?: IPISandboxResult[] })?.data
+      return Array.isArray(list) && list.length > 0 ? list : mockSandbox(input)
+    } catch {
+      return mockSandbox(input)
+    }
+  },
+
+  /**
+   * GET /narratives - Fetch narrative events within time window.
+   * Returns [] when API unavailable.
+   */
+  getNarratives: async (
+    companyId: string,
+    start: string,
+    end: string,
+    page?: number,
+    limit?: number
+  ): Promise<NarrativeEvent[]> => {
+    try {
+      const params = new URLSearchParams({
+        companyId,
+        start,
+        end,
+      })
+      if (page != null) params.set("page", String(page))
+      if (limit != null) params.set("limit", String(limit))
+      const data = await api.get<NarrativeEvent[] | { data: NarrativeEvent[] }>(
+        `/narratives?${params.toString()}`
+      )
+      const list = Array.isArray(data) ? data : (data as { data?: NarrativeEvent[] })?.data
+      return Array.isArray(list) ? list : []
+    } catch {
+      return []
+    }
+  },
+
+  /**
+   * GET /narratives/:id - Fetch single narrative event.
+   */
+  getNarrativeById: async (id: string): Promise<NarrativeEventCanonical | null> => {
+    try {
+      const res = await api.get<unknown>(`/narratives/${id}`)
+      const obj = res as { data?: NarrativeEventCanonical } | NarrativeEventCanonical
+      const item = (obj as { data?: NarrativeEventCanonical })?.data ?? (obj as NarrativeEventCanonical)
+      return item && typeof item === "object" && "id" in item ? (item as NarrativeEventCanonical) : null
+    } catch {
+      return null
+    }
+  },
+
   requestExport: async (
     companyId: string,
     window: string = "1W",
@@ -66,7 +141,6 @@ export const ipiApi = {
       const jobId = res?.jobId
       return { url, jobId }
     } catch {
-      // Mock for MVP when API unavailable
       await new Promise((r) => setTimeout(r, 1500))
       return {
         url: `#`,

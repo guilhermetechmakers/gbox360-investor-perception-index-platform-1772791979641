@@ -1,3 +1,13 @@
+/**
+ * IPI (Investor Perception Index) types
+ */
+
+export interface IPIWeights {
+  narrative: number
+  credibility: number
+  risk: number
+}
+
 export interface IPIScore {
   company_id: string
   score: number
@@ -24,4 +34,51 @@ export interface IPISimulateInput {
   window_start: string
   window_end: string
   weights: { narrative: number; credibility: number; risk: number }
+}
+
+/** POST /ipi/calculate request */
+export interface IPICalculateInput {
+  companyId: string
+  timeWindowStart: string
+  timeWindowEnd: string
+  weights?: Partial<IPIWeights>
+}
+
+/** POST /ipi/calculate response */
+export interface IPICalculateResult {
+  totalScore: number
+  narrativeScore: number
+  credibilityScore: number
+  riskScore: number
+  weightsUsed: IPIWeights
+  breakdown: {
+    narrative: { score: number; contribution: number; explanation: string }
+    credibility: { score: number; contribution: number; explanation: string }
+    risk: { score: number; contribution: number; explanation: string }
+  }
+  explainability: string[]
+  provisionalNotice?: string
+}
+
+/** POST /ipi/sandbox request */
+export interface IPISandboxInput {
+  companyId: string
+  timeWindowStart: string
+  timeWindowEnd: string
+  provisionalWeights: IPIWeights
+  scenarioName?: string
+  iterations?: number
+  scenarios?: Array<{ name: string; weights: IPIWeights }>
+}
+
+/** POST /ipi/sandbox response item */
+export interface IPISandboxResult {
+  scenarioName: string
+  totalScore: number
+  narrativeScore: number
+  credibilityScore: number
+  riskScore: number
+  weightsUsed: IPIWeights
+  breakdown: IPICalculateResult["breakdown"]
+  explanation?: string
 }

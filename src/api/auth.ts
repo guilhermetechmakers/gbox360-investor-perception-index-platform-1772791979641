@@ -18,7 +18,8 @@ function normalizeSignUpPayload(credentials: SignUpInput): Record<string, unknow
     role: credentials.userRole,
     accept_tos: credentials.agreeToTOS,
     terms_version: credentials.termsVersion,
-    full_name: credentials.full_name?.trim(),
+    full_name: credentials.full_name?.trim() ?? credentials.displayName?.trim(),
+    display_name: credentials.displayName?.trim(),
   }
 }
 
@@ -65,6 +66,7 @@ export const authApi = {
     api.post("/auth/password-reset-request", { email: email.trim().toLowerCase() }),
 
   verifyEmail: async (token: string): Promise<{ verified: boolean }> => {
+    // Backend may implement GET /auth/verify?token= or GET /auth/verify-email?token=
     const data = await api.get<{ verified?: boolean }>(`/auth/verify-email?token=${encodeURIComponent(token)}`)
     return { verified: data?.verified === true }
   },
@@ -119,19 +121,42 @@ export const authApi = {
 
   getMe: async (): Promise<CurrentUser | null> => {
     try {
-      const data = await api.get<{ id?: string; email?: string; full_name?: string; role?: string; mfa_enabled?: boolean } | null>("/auth/me")
+      const data = await api.get<{
+        id?: string
+        email?: string
+        full_name?: string
+        display_name?: string
+        role?: string
+        roles?: string[]
+        mfa_enabled?: boolean
+        is_email_verified?: boolean
+      } | null>("/auth/me")
       if (data && typeof data === "object" && typeof data.id === "string" && typeof data.email === "string") {
+        const roles = Array.isArray(data.roles) ? data.roles : (data.role ? [data.role] : [])
         return {
           id: data.id,
           email: data.email,
           full_name: data.full_name,
+          display_name: data.display_name,
           role: data.role,
+          roles: roles.length > 0 ? roles : undefined,
           mfa_enabled: data.mfa_enabled,
+          is_email_verified: data.is_email_verified,
         }
       }
       return null
     } catch {
       return null
     }
+  },
+
+  /** Refresh access token using refresh token (cookie or body). POST /auth/refresh */
+  refresh: async (): Promise<AuthResponse> => {
+    const data = await api.post<AuthResponse & { token?: string }>("/auth/refresh", {})
+    const token = data?.token
+    if (typeof token === "string" && token) {
+      localStorage.setItem("auth_token", token)
+    }
+    return data ?? {}
   },
 }

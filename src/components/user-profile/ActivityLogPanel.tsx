@@ -14,11 +14,12 @@ export interface ActivityLogPanelProps {
 }
 
 export function ActivityLogPanel({ showExport = false }: ActivityLogPanelProps) {
-  const { data: activities = [], isLoading } = useUserActivity()
+  const { data: activitiesData, isLoading } = useUserActivity()
+  const activities = activitiesData ?? []
   const exportMutation = useUserActivityExport()
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
-  const list = Array.isArray(activities) ? activities : (activities as ActivityItem[])
+  const list = Array.isArray(activities) ? activities : []
 
   const handleExport = () => {
     exportMutation.mutate()

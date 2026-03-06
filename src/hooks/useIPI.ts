@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { ipiApi } from "@/api/ipi"
 import { toast } from "sonner"
-import type { IPISimulateInput } from "@/types/ipi"
+import type { IPISimulateInput, IPICalculateInput, IPISandboxInput } from "@/types/ipi"
 
 export const ipiKeys = {
   current: (companyId: string, window: string) =>
@@ -12,7 +12,9 @@ export const ipiKeys = {
     ["ipi", "narratives", companyId, window, top] as const,
   events: (companyId: string, window: string) =>
     ["ipi", "events", companyId, window] as const,
-}
+  calculate: (companyId: string, start: string, end: string) =>
+    ["ipi", "calculate", companyId, start, end] as const,
+} as const
 
 export function useIPICurrent(companyId: string, window: string = "1W") {
   return useQuery({
@@ -60,5 +62,36 @@ export function useIPISimulate() {
       toast.success("Simulation complete")
     },
     onError: (error: Error) => toast.error(error.message ?? "Simulation failed"),
+  })
+}
+
+export function useIPICalculate() {
+  return useMutation({
+    mutationFn: (input: IPICalculateInput) => ipiApi.calculate(input),
+  })
+}
+
+export function useIPICalculateQuery(
+  companyId: string,
+  start: string,
+  end: string,
+  enabled = true
+) {
+  return useQuery({
+    queryKey: ipiKeys.calculate(companyId, start, end),
+    queryFn: () =>
+      ipiApi.calculate({
+        companyId,
+        timeWindowStart: `${start}T00:00:00.000Z`,
+        timeWindowEnd: `${end}T23:59:59.999Z`,
+      }),
+    enabled: !!companyId && !!start && !!end && enabled,
+    staleTime: 1000 * 60 * 2,
+  })
+}
+
+export function useIPISandbox() {
+  return useMutation({
+    mutationFn: (input: IPISandboxInput) => ipiApi.sandbox(input),
   })
 }

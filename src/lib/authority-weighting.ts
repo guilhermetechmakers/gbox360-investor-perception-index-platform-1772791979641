@@ -43,8 +43,7 @@ export function getAuthorityWeight(
   const integrationOverrides = integrationId
     ? INTEGRATION_OVERRIDES[integrationId]
     : undefined
-  const override =
-    integrationOverrides?.[normalized] ?? integrationOverrides?.[normalized]
+  const override = integrationOverrides?.[normalized]
 
   if (typeof override === "number" && override >= 0 && override <= 1) {
     return override

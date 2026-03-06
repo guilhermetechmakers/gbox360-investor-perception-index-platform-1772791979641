@@ -1,17 +1,16 @@
-import { useParams, Link } from "react-router-dom"
-import { useState } from "react"
+import { useParams, Link, useSearchParams } from "react-router-dom"
+import { useMemo } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
-import { Slider } from "@/components/ui/slider"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   useIPICurrent,
-  useIPISimulate,
   useIPIEvents,
 } from "@/hooks/useIPI"
 import { useCompany as useCompanyDetail } from "@/hooks/useCompanies"
 import { AnimatedPage } from "@/components/AnimatedPage"
+import { SandboxModal } from "@/components/ipi"
+import { windowToDateRange } from "@/lib/date-utils"
 import {
   BarChart,
   Bar,
@@ -22,43 +21,36 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts"
-import { Play, Pause, SkipForward } from "lucide-react"
-
-const WINDOW = "1W"
+import { Play, Pause, SkipForward, Beaker } from "lucide-react"
+import { useState } from "react"
+import { ipiApi } from "@/api/ipi"
 
 export default function DrillDown() {
   const { companyId } = useParams<{ companyId: string }>()
+  const [searchParams] = useSearchParams()
+  const [sandboxOpen, setSandboxOpen] = useState(false)
   const id = companyId ?? ""
+  const windowParam = searchParams.get("window") ?? "1W"
+  const validWindow = ["1D", "1W", "2W", "1M"].includes(windowParam) ? windowParam : "1W"
+
+  const { start, end } = useMemo(() => windowToDateRange(validWindow), [validWindow])
 
   const { data: company } = useCompanyDetail(id)
-  const { data: ipi, isLoading: ipiLoading } = useIPICurrent(id, WINDOW)
-  const { data: events } = useIPIEvents(id, WINDOW)
-  const simulate = useIPISimulate()
+  const { data: ipi, isLoading: ipiLoading } = useIPICurrent(id, validWindow)
+  const { data: events } = useIPIEvents(id, validWindow)
 
-  const [weights, setWeights] = useState({
-    narrative: 40,
-    credibility: 40,
-    risk: 20,
-  })
-  const [simulatedScore, setSimulatedScore] = useState<number | null>(null)
-
-  const handleSimulate = () => {
-    if (!id) return
-    simulate.mutate(
-      {
-        company_id: id,
-        window_start: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-        window_end: new Date().toISOString(),
-        weights: {
-          narrative: weights.narrative / 100,
-          credibility: weights.credibility / 100,
-          risk: weights.risk / 100,
-        },
-      },
-      {
-        onSuccess: (data) => setSimulatedScore(data.score),
-      }
-    )
+  const handleSandboxRun = async (weights: {
+    narrative: number
+    credibility: number
+    risk: number
+  }) => {
+    return ipiApi.sandbox({
+      companyId: id,
+      timeWindowStart: `${start}T00:00:00.000Z`,
+      timeWindowEnd: `${end}T23:59:59.999Z`,
+      provisionalWeights: weights,
+      scenarioName: "Custom",
+    })
   }
 
   const decompositionData = ipi
@@ -69,23 +61,35 @@ export default function DrillDown() {
       ]
     : []
 
+  const eventsList = Array.isArray(events) ? events : []
+
   return (
     <AnimatedPage>
-      <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Link to={`/dashboard/company/${id}`}>
+      <div className="mx-auto max-w-[1000px] space-y-6">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <Link to={`/dashboard/company/${id}?window=${validWindow}`}>
             <Button variant="ghost">← Back to company</Button>
           </Link>
           <h1 className="font-display text-2xl font-semibold">
             Why did this move? — {company?.name ?? "…"}
           </h1>
+          <Button
+            variant="outline"
+            onClick={() => setSandboxOpen(true)}
+            className="gap-2"
+          >
+            <Beaker className="h-4 w-4" />
+            Sandbox
+          </Button>
         </div>
 
         {/* Numeric decomposition */}
-        <Card>
+        <Card className="rounded-2xl shadow-card">
           <CardHeader>
             <CardTitle>IPI decomposition</CardTitle>
-            <CardDescription>Narrative, Credibility, and Risk components.</CardDescription>
+            <CardDescription>
+              Narrative, Credibility, and Risk components. Provisional weights: 40% / 40% / 20%.
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {ipiLoading ? (
@@ -107,61 +111,13 @@ export default function DrillDown() {
           </CardContent>
         </Card>
 
-        {/* Weights sandbox */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Weights sandbox</CardTitle>
-            <CardDescription>Adjust provisional weights and simulate IPI. Changes are logged for audit.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid gap-4 md:grid-cols-3">
-              <div className="space-y-2">
-                <Label>Narrative %</Label>
-                <Slider
-                  value={[weights.narrative]}
-                  onValueChange={([v]) => setWeights((w) => ({ ...w, narrative: v }))}
-                  max={100}
-                  step={5}
-                />
-                <p className="text-sm text-muted-foreground">{weights.narrative}%</p>
-              </div>
-              <div className="space-y-2">
-                <Label>Credibility %</Label>
-                <Slider
-                  value={[weights.credibility]}
-                  onValueChange={([v]) => setWeights((w) => ({ ...w, credibility: v }))}
-                  max={100}
-                  step={5}
-                />
-                <p className="text-sm text-muted-foreground">{weights.credibility}%</p>
-              </div>
-              <div className="space-y-2">
-                <Label>Risk %</Label>
-                <Slider
-                  value={[weights.risk]}
-                  onValueChange={([v]) => setWeights((w) => ({ ...w, risk: v }))}
-                  max={100}
-                  step={5}
-                />
-                <p className="text-sm text-muted-foreground">{weights.risk}%</p>
-              </div>
-            </div>
-            <Button onClick={handleSimulate} disabled={simulate.isPending}>
-              {simulate.isPending ? "Simulating…" : "Simulate IPI"}
-            </Button>
-            {simulatedScore !== null && (
-              <p className="text-sm text-muted-foreground">
-                Simulated IPI with custom weights: <strong>{simulatedScore.toFixed(1)}</strong>
-              </p>
-            )}
-          </CardContent>
-        </Card>
-
         {/* Replay controls */}
-        <Card>
+        <Card className="rounded-2xl shadow-card">
           <CardHeader>
             <CardTitle>Replay controls</CardTitle>
-            <CardDescription>Step through events (play / pause / step). Dry-run and execute from Admin.</CardDescription>
+            <CardDescription>
+              Step through events (play / pause / step). Dry-run and execute from Admin.
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex gap-2">
@@ -176,11 +132,20 @@ export default function DrillDown() {
               </Button>
             </div>
             <p className="mt-2 text-sm text-muted-foreground">
-              {events?.length ?? 0} events in window. Replay is available from Admin → Data Replay.
+              {eventsList.length} events in window. Replay is available from Admin → Data Replay.
             </p>
           </CardContent>
         </Card>
       </div>
+
+      <SandboxModal
+        open={sandboxOpen}
+        onOpenChange={setSandboxOpen}
+        companyId={id}
+        timeWindowStart={`${start}T00:00:00.000Z`}
+        timeWindowEnd={`${end}T23:59:59.999Z`}
+        onRun={handleSandboxRun}
+      />
     </AnimatedPage>
   )
 }

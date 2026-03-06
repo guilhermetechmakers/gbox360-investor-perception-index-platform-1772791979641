@@ -212,7 +212,7 @@ export default function VerifyEmail() {
             <CardHeader>
               <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
                 {tokenStatus === "success" ? (
-                  <CheckCircle className="h-6 w-6 text-green-600" aria-hidden />
+                  <CheckCircle className="h-6 w-6 text-primary" aria-hidden />
                 ) : tokenStatus === "error" ? (
                   <AlertCircle className="h-6 w-6 text-red-600" aria-hidden />
                 ) : tokenStatus === "verifying" ? (

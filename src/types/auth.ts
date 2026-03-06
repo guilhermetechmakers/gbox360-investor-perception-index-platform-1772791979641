@@ -14,6 +14,7 @@ export interface SignUpInput {
   agreeToTOS: boolean
   termsVersion?: string
   full_name?: string
+  displayName?: string
   company?: string
   role?: string
   accept_tos?: boolean
@@ -41,8 +42,11 @@ export interface CurrentUser {
   id: string
   email: string
   full_name?: string
+  display_name?: string
   role?: string
+  roles?: string[]
   mfa_enabled?: boolean
+  is_email_verified?: boolean
 }
 
 /** MFA setup response with secret and provisioning URI for authenticator app */
