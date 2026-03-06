@@ -33,7 +33,6 @@ export function SectionCard({
   const safeParagraphs = Array.isArray(paragraphs) ? paragraphs : []
   const safeLinks = Array.isArray(links) ? links : []
   const safeSubsections = Array.isArray(subsections) ? subsections : []
-  const hasContent = content ?? safeParagraphs.length > 0
 
   return (
     <section

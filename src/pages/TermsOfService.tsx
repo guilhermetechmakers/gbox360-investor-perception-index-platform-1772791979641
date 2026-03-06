@@ -3,15 +3,15 @@ import { AnimatedPage } from "@/components/AnimatedPage"
 import { TermsContainer } from "@/components/terms-of-service"
 import {
   TERMS_OF_SERVICE_CONTENT,
-  TERMS_LEGAL_CONTACT,
+  type TermsSection,
 } from "@/content/terms-of-service"
 
 export default function TermsOfService() {
   const sections = Array.isArray(TERMS_OF_SERVICE_CONTENT.sections)
-    ? TERMS_OF_SERVICE_CONTENT.sections
+    ? (TERMS_OF_SERVICE_CONTENT.sections as TermsSection[])
     : []
   const hero = TERMS_OF_SERVICE_CONTENT.hero ?? {}
-  const contact = TERMS_OF_SERVICE_CONTENT.contact ?? TERMS_LEGAL_CONTACT
+  const contact = TERMS_OF_SERVICE_CONTENT.contact ?? {}
 
   return (
     <div className="min-h-screen bg-[rgb(var(--hero-bg))] print:bg-white">
@@ -25,7 +25,7 @@ export default function TermsOfService() {
           heroSubtitle={hero.subtitle ?? ""}
           legalEmail={contact.email ?? "legal@gbox360.com"}
           legalFormUrl={contact.formUrl ?? "/about-help#contact"}
-          companyName={contact.companyName ?? "Gbox360"}
+          companyName="Gbox360"
           contactUrl="/about-help#contact"
         />
       </AnimatedPage>

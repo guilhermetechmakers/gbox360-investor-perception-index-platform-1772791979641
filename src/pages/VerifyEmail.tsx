@@ -17,15 +17,18 @@ import type { VerificationStatusValue } from "@/types/auth"
 const POLL_INTERVAL_MS = 15000
 const REDIRECT_DELAY_MS = 2000
 
-/** Status badge with accessible aria-label and color coding */
-function StatusIndicator({
+/** Status badge with accessible aria-label and color coding (design system: primary green for verified) */
+export function StatusIndicator({
   status,
   className,
 }: {
   status: VerificationStatusValue
   className?: string
 }) {
-  const config = {
+  const config: Record<
+    VerificationStatusValue,
+    { label: string; ariaLabel: string; className: string }
+  > = {
     pending: {
       label: "Pending",
       ariaLabel: "Verification status: Pending",
@@ -34,7 +37,7 @@ function StatusIndicator({
     verified: {
       label: "Verified",
       ariaLabel: "Verification status: Verified",
-      className: "bg-green-100 text-green-800 border-green-200",
+      className: "bg-primary/15 text-primary border-primary/30",
     },
     failed: {
       label: "Failed",
@@ -59,7 +62,7 @@ function StatusIndicator({
 }
 
 /** Re-send button with disabled/loading and rate-limiting states */
-function ResendVerificationButton({
+export function ResendVerificationButton({
   onClick,
   disabled,
   isLoading,
@@ -110,7 +113,7 @@ function ResendVerificationButton({
 }
 
 /** Support contact link */
-function SupportLink({ className }: { className?: string }) {
+export function SupportLink({ className }: { className?: string }) {
   return (
     <a
       href="mailto:support@gbox360.com?subject=Gbox360%20Email%20Verification%20Help"
@@ -179,23 +182,23 @@ export default function VerifyEmail() {
 
   useEffect(() => {
     if (tokenStatus === "success") {
-      toast.success("Email verified. Redirecting to sign in…")
-      const t = setTimeout(() => navigate("/auth"), REDIRECT_DELAY_MS)
+      toast.success("Email verified. Redirecting…")
+      const t = setTimeout(() => navigate("/dashboard"), REDIRECT_DELAY_MS)
       return () => clearTimeout(t)
     }
   }, [tokenStatus, navigate])
 
   useEffect(() => {
     if (isPostSignupFlow && status === "verified") {
-      toast.success("Email verified. Redirecting to sign in…")
-      const t = setTimeout(() => navigate("/auth"), REDIRECT_DELAY_MS)
+      toast.success("Email verified. Redirecting…")
+      const t = setTimeout(() => navigate("/dashboard"), REDIRECT_DELAY_MS)
       return () => clearTimeout(t)
     }
   }, [isPostSignupFlow, status, navigate])
 
   if (hasToken) {
     return (
-      <div className="flex min-h-screen flex-col bg-[rgb(var(--page-bg))]">
+      <div className="flex min-h-screen flex-col bg-page-bg">
         <header className="border-b border-border bg-card py-4 shadow-sm">
           <div className="container flex justify-center">
             <Link to="/" className="font-display text-xl font-semibold text-foreground">
@@ -203,8 +206,9 @@ export default function VerifyEmail() {
             </Link>
           </div>
         </header>
-        <AnimatedPage className="flex flex-1 items-center justify-center p-4">
-          <Card className="w-full max-w-md rounded-[18px] shadow-card border-border">
+        <section className="flex flex-1 items-center justify-center bg-hero-bg p-4">
+          <AnimatedPage className="w-full max-w-[1000px]">
+            <Card className="mx-auto w-full max-w-md rounded-[20px] border-border shadow-card transition-shadow hover:shadow-lg">
             <CardHeader>
               <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
                 {tokenStatus === "success" ? (
@@ -227,8 +231,8 @@ export default function VerifyEmail() {
                       : "Verify your email"}
               </CardTitle>
               <CardDescription className="text-center">
-                {tokenStatus === "success"
-                  ? "Your account is now active. Redirecting to sign in…"
+                {        tokenStatus === "success"
+                  ? "Your account is now active. Redirecting…"
                   : tokenStatus === "verifying"
                     ? "Please wait while we confirm your email."
                     : tokenStatus === "error"
@@ -257,13 +261,14 @@ export default function VerifyEmail() {
             </CardContent>
           </Card>
         </AnimatedPage>
+        </section>
       </div>
     )
   }
 
   if (!userId && !isUserLoading) {
     return (
-      <div className="flex min-h-screen flex-col bg-[rgb(var(--page-bg))]">
+      <div className="flex min-h-screen flex-col bg-page-bg">
         <header className="border-b border-border bg-card py-4 shadow-sm">
           <div className="container flex justify-center">
             <Link to="/" className="font-display text-xl font-semibold text-foreground">
@@ -271,8 +276,9 @@ export default function VerifyEmail() {
             </Link>
           </div>
         </header>
-        <AnimatedPage className="flex flex-1 items-center justify-center p-4">
-          <Card className="w-full max-w-md rounded-[18px] shadow-card border-border">
+        <section className="flex flex-1 items-center justify-center bg-hero-bg p-4">
+          <AnimatedPage className="w-full max-w-[1000px]">
+            <Card className="mx-auto w-full max-w-md rounded-[20px] border-border shadow-card">
             <CardHeader>
               <CardTitle className="text-center font-display text-2xl">
                 Verify your email
@@ -296,13 +302,14 @@ export default function VerifyEmail() {
             </CardContent>
           </Card>
         </AnimatedPage>
+        </section>
       </div>
     )
   }
 
   if (!userId && isUserLoading) {
     return (
-      <div className="flex min-h-screen flex-col bg-[rgb(var(--page-bg))]">
+      <div className="flex min-h-screen flex-col bg-page-bg">
         <header className="border-b border-border bg-card py-4 shadow-sm">
           <div className="container flex justify-center">
             <Link to="/" className="font-display text-xl font-semibold text-foreground">
@@ -310,20 +317,22 @@ export default function VerifyEmail() {
             </Link>
           </div>
         </header>
-        <AnimatedPage className="flex flex-1 items-center justify-center p-4">
-          <Card className="w-full max-w-md rounded-[18px] shadow-card border-border">
+        <section className="flex flex-1 items-center justify-center bg-hero-bg p-4">
+          <AnimatedPage className="w-full max-w-[1000px]">
+            <Card className="mx-auto w-full max-w-md rounded-[20px] border-border shadow-card">
             <CardContent className="flex flex-col items-center gap-4 py-12">
               <Loader2 className="h-10 w-10 animate-spin text-primary" aria-hidden />
               <p className="text-sm text-muted-foreground">Loading…</p>
             </CardContent>
           </Card>
         </AnimatedPage>
+        </section>
       </div>
     )
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-[rgb(var(--page-bg))]">
+    <div className="flex min-h-screen flex-col bg-page-bg">
       <header className="border-b border-border bg-card py-4 shadow-sm">
         <div className="container flex items-center justify-between px-4">
           <Link to="/" className="font-display text-xl font-semibold text-foreground">
@@ -337,8 +346,9 @@ export default function VerifyEmail() {
           </Link>
         </div>
       </header>
-      <AnimatedPage className="flex flex-1 items-center justify-center p-4">
-        <Card className="w-full max-w-lg rounded-[18px] shadow-card border-border">
+      <section className="flex flex-1 items-center justify-center bg-hero-bg p-4">
+        <AnimatedPage className="w-full max-w-[1000px]">
+          <Card className="mx-auto w-full max-w-lg rounded-[20px] border-border shadow-card transition-shadow hover:shadow-lg">
           <CardHeader className="space-y-4">
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
               <Mail className="h-7 w-7 text-primary" aria-hidden />
@@ -347,9 +357,11 @@ export default function VerifyEmail() {
               Verify your email to activate your account
             </CardTitle>
             <CardDescription className="text-center text-base">
-              A verification link has been sent to{" "}
-              <span className="font-medium text-foreground">{email}</span>. Please click the link to
-              verify. You can re-send the email if you didn&apos;t receive it.
+              A verification link has been sent to you. Please click the link to verify. You can
+              re-send the email if you didn&apos;t receive it.
+              {email ? (
+                <span className="mt-2 block font-medium text-foreground">Sent to: {email}</span>
+              ) : null}
             </CardDescription>
             <div className="flex justify-center pt-2">
               <StatusIndicator status={status} />
@@ -394,7 +406,11 @@ export default function VerifyEmail() {
             </details>
           </CardContent>
         </Card>
-      </AnimatedPage>
+        </AnimatedPage>
+      </section>
     </div>
   )
 }
+
+/** Named export for spec: Email Verification page component */
+export { VerifyEmail as EmailVerificationPage }

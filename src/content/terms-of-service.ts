@@ -3,16 +3,23 @@
  * Structure supports i18n and CMS integration in the future.
  */
 
+export interface TermsLink {
+  text: string
+  href: string
+}
+
 export interface TermsSection {
   id: string
   title: string
   paragraphs: string[]
+  links?: TermsLink[]
   subsections?: Array<{ title: string; paragraphs: string[] }>
 }
 
 export interface TermsContact {
   email: string
   formUrl?: string
+  companyName?: string
 }
 
 export interface TermsHero {
@@ -122,12 +129,17 @@ export const TERMS_SECTIONS: TermsSection[] = [
     paragraphs: [
       "For legal inquiries, questions about these terms, or to exercise your rights, please contact us. We aim to respond within 5 business days.",
     ],
+    links: [
+      { text: "Legal inquiries", href: "mailto:legal@gbox360.com" },
+      { text: "Support form", href: "/about-help#contact" },
+    ],
   },
 ]
 
 export const TERMS_CONTACT: TermsContact = {
   email: "legal@gbox360.com",
   formUrl: "/about-help#contact",
+  companyName: "Gbox360",
 }
 
 /** Unified content object for the Terms of Service page */

@@ -1,32 +1,34 @@
 import { cn } from "@/lib/utils"
 
-interface NavItem {
+export interface AnchorNavItem {
   id: string
   title: string
 }
 
-interface AnchorNavProps {
-  items: NavItem[]
+export interface AnchorNavProps {
+  items?: AnchorNavItem[]
   className?: string
 }
 
-export function AnchorNav({ items, className }: AnchorNavProps) {
+export function AnchorNav({ items = [], className }: AnchorNavProps) {
   const safeItems = Array.isArray(items) ? items : []
+
+  if (safeItems.length === 0) return null
 
   return (
     <nav
+      className={cn("space-y-1", className)}
       aria-label="Terms of Service sections"
-      className={cn("space-y-2", className)}
     >
-      <h3 className="font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-        Quick navigation
-      </h3>
-      <ul className="space-y-1">
+      <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+        Jump to section
+      </p>
+      <ul className="space-y-0.5">
         {safeItems.map((item) => (
           <li key={item.id}>
             <a
               href={`#${item.id}`}
-              className="text-sm text-muted-foreground transition-colors hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded"
+              className="block rounded-md px-2 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
               {item.title}
             </a>

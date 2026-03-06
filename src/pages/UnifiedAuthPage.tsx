@@ -9,7 +9,6 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Checkbox } from "@/components/ui/checkbox"
-import { AcceptTermsInline } from "@/components/terms-of-service"
 import {
   Select,
   SelectContent,
@@ -22,6 +21,7 @@ import { AnimatedPage } from "@/components/AnimatedPage"
 import { MFAPromptModal } from "@/components/auth/MFAPromptModal"
 import { SSOLoginButton } from "@/components/auth/SSOLoginButton"
 import { InlineErrorBox } from "@/components/auth/InlineErrorBox"
+import { AcceptTermsInline } from "@/components/terms-of-service"
 import type { SignInInput, SignUpInput, UserRole } from "@/types/auth"
 import { TERMS_VERSION } from "@/content/terms-of-service"
 import { ArrowLeft, Loader2 } from "lucide-react"

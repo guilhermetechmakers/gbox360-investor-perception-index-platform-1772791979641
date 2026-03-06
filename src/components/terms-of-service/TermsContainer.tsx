@@ -1,12 +1,10 @@
 import { useState } from "react"
-import {
-  SectionCard,
-  VersionBadge,
-  ContactLegalLink,
-  AcceptTermsInline,
-  LegalFooter,
-  AnchorNav,
-} from "@/components/terms-of-service"
+import { SectionCard } from "@/components/terms-of-service/SectionCard"
+import { VersionBadge } from "@/components/terms-of-service/VersionBadge"
+import { ContactLegalLink } from "@/components/terms-of-service/ContactLegalLink"
+import { AcceptTermsInline } from "@/components/terms-of-service/AcceptTermsInline"
+import { LegalFooter } from "@/components/terms-of-service/LegalFooter"
+import { AnchorNav } from "@/components/terms-of-service/AnchorNav"
 import type { TermsSection } from "@/content/terms-of-service"
 
 interface TermsContainerProps {
@@ -82,7 +80,6 @@ export function TermsContainer({
                 id={section.id}
                 title={section.title}
                 paragraphs={section.paragraphs ?? []}
-                links={section.links}
               />
             ))}
 

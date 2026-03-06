@@ -27,6 +27,12 @@ export function Navbar() {
           >
             About & Help
           </Link>
+          <Link
+            to="/terms"
+            className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+          >
+            Terms
+          </Link>
           <Link to="/auth?tab=login">
             <Button variant="ghost">Log in</Button>
           </Link>
