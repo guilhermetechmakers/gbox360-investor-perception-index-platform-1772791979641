@@ -61,7 +61,11 @@ export function FiltersBar({ filter, onFilterChange, actions }: FiltersBarProps)
   }
 
   return (
-    <div className="flex flex-col gap-4 rounded-xl border border-border bg-card p-4 shadow-card">
+    <div
+      className="flex flex-col gap-4 rounded-xl border border-border bg-card p-4 shadow-card"
+      role="search"
+      aria-label="Filter invoices"
+    >
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="space-y-2">
           <Label htmlFor="search" className="text-sm font-medium">

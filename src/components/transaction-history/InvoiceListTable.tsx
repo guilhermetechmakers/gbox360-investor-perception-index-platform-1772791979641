@@ -12,6 +12,23 @@ function formatCurrency(amount: number, currency: string): string {
   }).format(Number.isFinite(amount) ? amount : 0)
 }
 
+function getStatusLabel(status: InvoiceStatus): string {
+  switch (status) {
+    case "paid":
+      return "Paid"
+    case "unpaid":
+      return "Unpaid"
+    case "past_due":
+      return "Past Due"
+    case "refunded":
+      return "Refunded"
+    case "canceled":
+      return "Canceled"
+    default:
+      return String(status ?? "")
+  }
+}
+
 function getStatusVariant(status: InvoiceStatus): "default" | "secondary" | "destructive" | "outline" {
   switch (status) {
     case "paid":
@@ -76,22 +93,22 @@ export function InvoiceListTable({
   const SortIcon = ({ column }: { column: SortKey }) => {
     if (sortKey !== column) return null
     return sortDir === "asc" ? (
-      <ChevronUp className="ml-1 h-4 w-4" />
+      <ChevronUp className="ml-1 h-4 w-4" aria-hidden />
     ) : (
-      <ChevronDown className="ml-1 h-4 w-4" />
+      <ChevronDown className="ml-1 h-4 w-4" aria-hidden />
     )
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border border-border bg-card shadow-card">
+    <div className="overflow-hidden rounded-xl border border-border bg-card shadow-card transition-shadow hover:shadow-card">
       <div className="overflow-x-auto">
         <table
-          className="w-full min-w-[640px] text-sm"
+          className="w-full min-w-[720px] text-sm"
           role="table"
           aria-label="Invoice and transaction history"
         >
           <thead>
-            <tr className="border-b border-border bg-muted/30">
+            <tr className="sticky top-0 z-10 border-b border-border bg-muted/50">
               <th
                 className="cursor-pointer px-4 py-3 text-left font-medium"
                 onClick={() => handleSort("date")}
@@ -122,6 +139,9 @@ export function InvoiceListTable({
                   Amount
                   <SortIcon column="amount" />
                 </span>
+              </th>
+              <th className="px-4 py-3 text-left font-medium" scope="col">
+                Currency
               </th>
               <th
                 className="cursor-pointer px-4 py-3 text-left font-medium"
@@ -166,11 +186,14 @@ export function InvoiceListTable({
                   {inv.planName ?? "—"}
                 </td>
                 <td className="px-4 py-3 font-medium">
-                  {formatCurrency(inv.amount, inv.currency)}
+                  {formatCurrency(inv.amount ?? 0, inv.currency ?? "USD")}
+                </td>
+                <td className="px-4 py-3 text-muted-foreground">
+                  {inv.currency ?? "USD"}
                 </td>
                 <td className="px-4 py-3">
                   <Badge variant={getStatusVariant(inv.status)}>
-                    {inv.status}
+                    {getStatusLabel(inv.status)}
                   </Badge>
                 </td>
                 <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>

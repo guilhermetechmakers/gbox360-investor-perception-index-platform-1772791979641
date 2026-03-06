@@ -2,16 +2,16 @@ import { useEffect, useState, useRef, useCallback } from "react"
 import { Link, useSearchParams, useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import {
   useResendVerification,
   useVerifyEmail,
-  useVerificationStatus,
   useCurrentUser,
+  useVerificationStatus,
 } from "@/hooks/useAuth"
 import { AnimatedPage } from "@/components/AnimatedPage"
 import { Mail, CheckCircle, Loader2, AlertCircle, HelpCircle } from "lucide-react"
 import { toast } from "sonner"
+import { cn } from "@/lib/utils"
 import type { VerificationStatusValue } from "@/types/auth"
 
 const POLL_INTERVAL_MS = 15000
@@ -20,72 +20,90 @@ const REDIRECT_DELAY_MS = 2000
 /** Status badge with accessible aria-label and color coding */
 function StatusIndicator({
   status,
-  "aria-label": ariaLabel,
   className,
 }: {
   status: VerificationStatusValue
-  "aria-label"?: string
   className?: string
 }) {
-  const labels: Record<VerificationStatusValue, string> = {
-    pending: "Verification pending",
-    verified: "Email verified",
-    failed: "Verification failed",
+  const config = {
+    pending: {
+      label: "Pending",
+      ariaLabel: "Verification status: Pending",
+      className: "bg-amber-100 text-amber-800 border-amber-200",
+    },
+    verified: {
+      label: "Verified",
+      ariaLabel: "Verification status: Verified",
+      className: "bg-green-100 text-green-800 border-green-200",
+    },
+    failed: {
+      label: "Failed",
+      ariaLabel: "Verification status: Failed",
+      className: "bg-red-100 text-red-800 border-red-200",
+    },
   }
-  const label = ariaLabel ?? labels[status] ?? "Verification status"
-
-  const variant =
-    status === "verified"
-      ? "success"
-      : status === "failed"
-        ? "destructive"
-        : "secondary"
-
+  const c = config[status] ?? config.pending
   return (
-    <Badge
-      variant={variant}
-      className={className}
+    <span
       role="status"
-      aria-label={label}
+      aria-label={c.ariaLabel}
+      className={cn(
+        "inline-flex items-center rounded-full border px-3 py-1 text-sm font-medium",
+        c.className,
+        className
+      )}
     >
-      {labels[status]}
-    </Badge>
+      {c.label}
+    </span>
   )
 }
 
-/** Re-send button with disabled/loading states and rate-limit handling */
+/** Re-send button with disabled/loading and rate-limiting states */
 function ResendVerificationButton({
-  onResend,
+  onClick,
+  disabled,
   isLoading,
-  canResend,
   cooldownSeconds,
   className,
 }: {
-  onResend: () => void
-  isLoading: boolean
-  canResend: boolean
-  cooldownSeconds: number
+  onClick: () => void
+  disabled?: boolean
+  isLoading?: boolean
+  cooldownSeconds?: number
   className?: string
 }) {
-  const isDisabled = !canResend || isLoading || cooldownSeconds > 0
+  const [countdown, setCountdown] = useState(cooldownSeconds ?? 0)
+
+  useEffect(() => {
+    if (cooldownSeconds == null || cooldownSeconds <= 0) return
+    setCountdown(cooldownSeconds)
+  }, [cooldownSeconds])
+
+  useEffect(() => {
+    if (countdown <= 0) return
+    const t = setInterval(() => setCountdown((c) => Math.max(0, c - 1)), 1000)
+    return () => clearInterval(t)
+  }, [countdown])
+
+  const isDisabled = disabled || isLoading || countdown > 0
 
   return (
     <Button
       type="button"
-      onClick={onResend}
+      onClick={onClick}
       disabled={isDisabled}
-      className={className}
-      aria-label={cooldownSeconds > 0 ? `Resend available in ${cooldownSeconds} seconds` : "Resend verification email"}
+      className={cn("w-full", className)}
+      aria-label={countdown > 0 ? `Resend available in ${countdown} seconds` : "Resend verification email"}
     >
       {isLoading ? (
         <>
           <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
           Sending…
         </>
-      ) : cooldownSeconds > 0 ? (
-        `Resend in ${cooldownSeconds}s`
+      ) : countdown > 0 ? (
+        `Resend in ${countdown}s`
       ) : (
-        "Re-send verification email"
+        "Resend verification email"
       )}
     </Button>
   )
@@ -96,105 +114,213 @@ function SupportLink({ className }: { className?: string }) {
   return (
     <a
       href="mailto:support@gbox360.com?subject=Gbox360%20Email%20Verification%20Help"
-      className={`text-sm text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded ${className ?? ""}`}
-      aria-label="Contact support for verification help"
+      className={cn(
+        "text-sm text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded",
+        className
+      )}
+      aria-label="Contact support for help with email verification"
     >
       Need help? Contact support
     </a>
   )
 }
 
+type TokenVerifyStatus = "idle" | "verifying" | "success" | "error"
+
 export default function VerifyEmail() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const token = searchParams.get("token") ?? searchParams.get("token_hash") ?? ""
-  const emailParam = searchParams.get("email") ?? ""
-
-  const { user } = useCurrentUser()
-  const userId = user?.id ?? ""
-  const email = emailParam || user?.email ?? ""
-
-  const [status, setStatus] = useState<VerificationStatusValue>("pending")
-  const [lastResendAt, setLastResendAt] = useState<number>(0)
-  const [cooldownUntil, setCooldownUntil] = useState<number>(0)
-  const [showWhyInfo, setShowWhyInfo] = useState(false)
+  const [tokenStatus, setTokenStatus] = useState<TokenVerifyStatus>(token ? "verifying" : "idle")
   const verifiedRef = useRef(false)
+
+  const { user, isLoading: isUserLoading } = useCurrentUser()
+  const userId = user?.id ?? ""
+  const email = user?.email ?? ""
+  const hasTokenStored = typeof window !== "undefined" && !!localStorage.getItem("auth_token")
 
   const resend = useResendVerification()
   const verifyEmail = useVerifyEmail()
+  const [cooldownUntil, setCooldownUntil] = useState<number>(0)
 
-  const shouldPoll = !token && !!userId
-  const { data: statusData } = useVerificationStatus(userId, {
-    enabled: shouldPoll && status === "pending",
+  const hasToken = token.length > 0
+  const isPostSignupFlow = !hasToken
+
+  const { data: statusData, refetch: refetchStatus } = useVerificationStatus(userId || undefined, {
+    enabled: isPostSignupFlow && (!!userId || hasTokenStored),
     refetchInterval: POLL_INTERVAL_MS,
   })
 
-  const canResend = true
-  const now = Date.now() / 1000
-  const cooldownSeconds = Math.max(0, Math.ceil((cooldownUntil - now)))
+  const status: VerificationStatusValue = (statusData?.status ?? "pending") as VerificationStatusValue
+  const nowSec = Math.floor(Date.now() / 1000)
+  const cooldownSeconds = Math.max(0, cooldownUntil - nowSec)
 
   const handleResend = useCallback(() => {
-    if (cooldownSeconds > 0 || resend.isPending) return
-    resend.mutate(
-      { userId: userId || undefined, email: email || undefined },
-      {
-        onSuccess: (data) => {
-          setLastResendAt(Date.now())
-          const cd = data?.cooldown ?? 60
-          if (cd > 0) {
-            setCooldownUntil(Date.now() / 1000 + cd)
-          }
-          if (data?.success === false && data?.message) {
-            toast.error(data.message)
-          }
-        },
-      }
-    )
-  }, [userId, email, cooldownSeconds, resend])
+    resend.mutate(userId && email ? { userId, email } : undefined, {
+      onSuccess: (data) => {
+        const cd = data?.cooldown ?? 60
+        if (cd > 0) setCooldownUntil(Math.floor(Date.now() / 1000) + cd)
+      },
+    })
+  }, [resend, userId, email])
 
   useEffect(() => {
-    if (cooldownUntil > 0 && cooldownUntil <= now) {
-      const t = setInterval(() => {
-        const n = Date.now() / 1000
-        if (n >= cooldownUntil) {
-          setCooldownUntil(0)
-          clearInterval(t)
-        }
-      }, 1000)
-      return () => clearInterval(t)
-    }
-  }, [cooldownUntil, now])
-
-  useEffect(() => {
-    if (!token || verifiedRef.current) return
+    if (!hasToken || verifiedRef.current) return
     verifiedRef.current = true
-    setStatus("pending")
+    setTokenStatus("verifying")
     verifyEmail.mutate(token, {
       onSuccess: (data) => {
         const verified = data?.verified ?? true
-        setStatus(verified ? "verified" : "failed")
+        setTokenStatus(verified ? "success" : "error")
       },
-      onError: () => setStatus("failed"),
+      onError: () => setTokenStatus("error"),
     })
-  }, [token, verifyEmail])
+  }, [hasToken, token, verifyEmail])
 
   useEffect(() => {
-    const remoteStatus = statusData?.status
-    if (typeof remoteStatus === "string" && remoteStatus !== status) {
-      setStatus(remoteStatus as VerificationStatusValue)
-    }
-  }, [statusData?.status, status])
-
-  useEffect(() => {
-    if (status === "verified") {
+    if (tokenStatus === "success") {
       toast.success("Email verified. Redirecting…")
       const t = setTimeout(() => navigate("/dashboard"), REDIRECT_DELAY_MS)
       return () => clearTimeout(t)
     }
-  }, [status, navigate])
+  }, [tokenStatus, navigate])
 
-  const isTokenFlow = !!token
-  const isVerifying = isTokenFlow && status === "pending"
+  useEffect(() => {
+    if (isPostSignupFlow && status === "verified") {
+      toast.success("Email verified. Redirecting…")
+      const t = setTimeout(() => navigate("/dashboard"), REDIRECT_DELAY_MS)
+      return () => clearTimeout(t)
+    }
+  }, [isPostSignupFlow, status, navigate])
+
+  if (hasToken) {
+    return (
+      <div className="flex min-h-screen flex-col bg-[rgb(var(--hero-bg))]">
+        <header className="border-b border-border bg-card py-4">
+          <div className="container flex justify-center">
+            <Link to="/" className="font-display text-xl font-semibold text-foreground">
+              Gbox360
+            </Link>
+          </div>
+        </header>
+        <AnimatedPage className="flex flex-1 items-center justify-center p-4">
+          <Card className="w-full max-w-md shadow-card">
+            <CardHeader>
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+                {tokenStatus === "success" ? (
+                  <CheckCircle className="h-6 w-6 text-green-600" aria-hidden />
+                ) : tokenStatus === "error" ? (
+                  <AlertCircle className="h-6 w-6 text-red-600" aria-hidden />
+                ) : tokenStatus === "verifying" ? (
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" aria-hidden />
+                ) : (
+                  <Mail className="h-6 w-6 text-primary" aria-hidden />
+                )}
+              </div>
+              <CardTitle className="text-center font-display text-2xl">
+                {tokenStatus === "success"
+                  ? "Email verified"
+                  : tokenStatus === "verifying"
+                    ? "Verifying your email…"
+                    : tokenStatus === "error"
+                      ? "Verification failed"
+                      : "Verify your email"}
+              </CardTitle>
+              <CardDescription className="text-center">
+                {tokenStatus === "success"
+                  ? "Your account is now active. Redirecting to dashboard…"
+                  : tokenStatus === "verifying"
+                    ? "Please wait while we confirm your email."
+                    : tokenStatus === "error"
+                      ? "The verification link may have expired or is invalid. Request a new one below."
+                      : "We sent a verification link to your email. Click it to activate your account."}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {tokenStatus !== "success" && (
+                <ResendVerificationButton
+                  onClick={handleResend}
+                  disabled={tokenStatus === "verifying"}
+                  isLoading={resend.isPending}
+                  cooldownSeconds={cooldownSeconds > 0 ? cooldownSeconds : undefined}
+                />
+              )}
+              <p className="text-center text-sm text-muted-foreground">
+                <SupportLink />
+              </p>
+              <Link
+                to="/auth"
+                className="block text-center text-sm text-primary hover:underline"
+              >
+                Back to log in
+              </Link>
+            </CardContent>
+          </Card>
+        </AnimatedPage>
+      </div>
+    )
+  }
+
+  if (!userId && !isUserLoading) {
+    return (
+      <div className="flex min-h-screen flex-col bg-[rgb(var(--hero-bg))]">
+        <header className="border-b border-border bg-card py-4">
+          <div className="container flex justify-center">
+            <Link to="/" className="font-display text-xl font-semibold text-foreground">
+              Gbox360
+            </Link>
+          </div>
+        </header>
+        <AnimatedPage className="flex flex-1 items-center justify-center p-4">
+          <Card className="w-full max-w-md shadow-card">
+            <CardHeader>
+              <CardTitle className="text-center font-display text-2xl">
+                Verify your email
+              </CardTitle>
+              <CardDescription className="text-center">
+                {hasTokenStored
+                  ? "Loading your account…"
+                  : "Please log in to verify your email address."}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {hasTokenStored ? (
+                <div className="flex justify-center py-4">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" aria-hidden />
+                </div>
+              ) : (
+                <Link to="/auth">
+                  <Button className="w-full">Go to log in</Button>
+                </Link>
+              )}
+            </CardContent>
+          </Card>
+        </AnimatedPage>
+      </div>
+    )
+  }
+
+  if (!userId && isUserLoading) {
+    return (
+      <div className="flex min-h-screen flex-col bg-[rgb(var(--hero-bg))]">
+        <header className="border-b border-border bg-card py-4">
+          <div className="container flex justify-center">
+            <Link to="/" className="font-display text-xl font-semibold text-foreground">
+              Gbox360
+            </Link>
+          </div>
+        </header>
+        <AnimatedPage className="flex flex-1 items-center justify-center p-4">
+          <Card className="w-full max-w-md shadow-card">
+            <CardContent className="flex flex-col items-center gap-4 py-12">
+              <Loader2 className="h-10 w-10 animate-spin text-primary" aria-hidden />
+              <p className="text-sm text-muted-foreground">Loading…</p>
+            </CardContent>
+          </Card>
+        </AnimatedPage>
+      </div>
+    )
+  }
 
   return (
     <div className="flex min-h-screen flex-col bg-[rgb(var(--hero-bg))]">
@@ -215,77 +341,57 @@ export default function VerifyEmail() {
         <Card className="w-full max-w-lg shadow-card">
           <CardHeader className="space-y-4">
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
-              {status === "verified" ? (
-                <CheckCircle className="h-7 w-7 text-green-600" aria-hidden />
-              ) : status === "failed" ? (
-                <AlertCircle className="h-7 w-7 text-red-600" aria-hidden />
-              ) : isVerifying ? (
-                <Loader2 className="h-7 w-7 animate-spin text-primary" aria-hidden />
-              ) : (
-                <Mail className="h-7 w-7 text-primary" aria-hidden />
-              )}
+              <Mail className="h-7 w-7 text-primary" aria-hidden />
             </div>
-            <div className="space-y-2 text-center">
-              <CardTitle className="font-display text-2xl md:text-3xl">
-                {status === "verified"
-                  ? "Email verified"
-                  : isVerifying
-                    ? "Verifying your email…"
-                    : status === "failed"
-                      ? "Verification failed"
-                      : "Verify your email to activate your account."}
-              </CardTitle>
-              <CardDescription className="text-base">
-                {status === "verified"
-                  ? "Your account is now active. Redirecting to your dashboard…"
-                  : isVerifying
-                    ? "Please wait while we confirm your email."
-                    : status === "failed"
-                      ? "The verification link may have expired or is invalid. Request a new one below."
-                      : "A verification link has been sent to you. Please click the link to verify. You can re-send the email if you didn't receive it."}
-              </CardDescription>
-            </div>
-            <div className="flex justify-center">
+            <CardTitle className="text-center font-display text-2xl md:text-3xl">
+              Verify your email to activate your account
+            </CardTitle>
+            <CardDescription className="text-center text-base">
+              A verification link has been sent to{" "}
+              <span className="font-medium text-foreground">{email}</span>. Please click the link to
+              verify. You can re-send the email if you didn&apos;t receive it.
+            </CardDescription>
+            <div className="flex justify-center pt-2">
               <StatusIndicator status={status} />
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
-            {status !== "verified" && (
-              <div className="space-y-4">
-                <ResendVerificationButton
-                  onResend={handleResend}
-                  isLoading={resend.isPending}
-                  canResend={canResend}
-                  cooldownSeconds={cooldownSeconds}
-                  className="w-full"
-                />
-              </div>
-            )}
-
-            <div className="flex flex-col items-center gap-4 border-t border-border pt-6">
+            <div className="rounded-lg border border-border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+              <p className="font-medium text-foreground">Live status</p>
+              <p>
+                {status === "verified"
+                  ? "Your email has been verified. Redirecting to dashboard…"
+                  : status === "pending"
+                    ? "Waiting for verification. We check every 15 seconds."
+                    : "Verification failed. Please try again or contact support."}
+              </p>
+            </div>
+            <ResendVerificationButton
+              onClick={handleResend}
+              disabled={status === "verified"}
+              isLoading={resend.isPending}
+              cooldownSeconds={cooldownSeconds > 0 ? cooldownSeconds : undefined}
+            />
+            <div className="flex flex-col items-center gap-2 text-center">
               <SupportLink />
               <button
                 type="button"
-                onClick={() => setShowWhyInfo(!showWhyInfo)}
-                className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded"
-                aria-expanded={showWhyInfo}
+                onClick={() => refetchStatus()}
+                className="text-xs text-muted-foreground hover:text-foreground hover:underline"
               >
-                <HelpCircle className="h-3.5 w-3.5" aria-hidden />
-                Why am I seeing this?
+                Check verification status now
               </button>
-              {showWhyInfo && (
-                <p className="animate-fade-in text-center text-sm text-muted-foreground max-w-md">
-                  We require email verification to activate your account and ensure secure access. After signup, you receive a link—click it to verify. If you don't see it, check your spam folder or use the re-send button above.
-                </p>
-              )}
             </div>
-
-            <Link
-              to="/auth"
-              className="block text-center text-sm text-primary hover:underline"
-            >
-              Back to log in
-            </Link>
+            <details className="group">
+              <summary className="flex cursor-pointer items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+                <HelpCircle className="h-4 w-4" aria-hidden />
+                Why am I seeing this?
+              </summary>
+              <p className="mt-2 text-sm text-muted-foreground">
+                We require email verification to ensure account security and deliver important
+                updates. Check your inbox (and spam folder) for the verification link.
+              </p>
+            </details>
           </CardContent>
         </Card>
       </AnimatedPage>
