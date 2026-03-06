@@ -2,6 +2,8 @@
 
 This runbook describes how to test each Settings panel, simulate admin vs. non-admin flows, and extend the feature for SSO and webhooks.
 
+For **authentication flows** (login, signup, password reset, email verification, MFA, sessions), see **AUTH_RUNBOOK.md**.
+
 ## Routes
 
 - **Primary:** `/dashboard/settings` (authenticated, inside dashboard layout)
