@@ -43,4 +43,28 @@ export const ipiApi = {
 
   simulate: (input: IPISimulateInput): Promise<IPIScore> =>
     api.post<IPIScore>("/ipi/simulate", input),
+
+  /**
+   * Timeline data for company with optional date/type filters.
+   * Gracefully returns [] if endpoint unavailable.
+   */
+  getTimelines: async (
+    companyId: string,
+    params?: { from?: string; to?: string; types?: string }
+  ): Promise<NarrativeEvent[]> => {
+    try {
+      const search = new URLSearchParams()
+      search.set("companyId", companyId)
+      if (params?.from) search.set("from", params.from)
+      if (params?.to) search.set("to", params.to)
+      if (params?.types) search.set("types", params.types)
+      const data = await api.get<NarrativeEvent[] | { data: NarrativeEvent[] }>(
+        `/ipi/timelines?${search.toString()}`
+      )
+      const list = Array.isArray(data) ? data : (data as { data?: NarrativeEvent[] })?.data
+      return Array.isArray(list) ? list : []
+    } catch {
+      return []
+    }
+  },
 }

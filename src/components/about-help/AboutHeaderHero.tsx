@@ -16,8 +16,9 @@ export function AboutHeaderHero({
   return (
     <section
       className={cn(
-        "relative overflow-hidden bg-[rgb(var(--hero-bg))] px-4 py-16 md:py-24",
+        "relative overflow-hidden bg-hero-bg px-4 py-16 md:py-24",
         backgroundPattern && "bg-cover bg-center",
+        "animate-fade-in-up",
         className
       )}
       style={
@@ -27,10 +28,10 @@ export function AboutHeaderHero({
       }
     >
       <div className="container mx-auto max-w-[1000px] text-center">
-        <h1 className="font-display text-4xl font-bold tracking-tight text-[rgb(var(--foreground))] md:text-5xl lg:text-6xl">
+        <h1 className="font-display text-4xl font-bold tracking-tight text-foreground md:text-5xl lg:text-6xl">
           {title}
         </h1>
-        <p className="mt-6 text-lg leading-relaxed text-[rgb(var(--muted-foreground))]">
+        <p className="mt-6 text-lg leading-relaxed text-muted-foreground">
           {subtitle}
         </p>
       </div>

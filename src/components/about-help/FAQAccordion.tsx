@@ -66,28 +66,28 @@ export function FAQAccordion({
             defaultValue={[sortedItems[0]?.id].filter(Boolean) as string[]}
             className="w-full"
           >
-          {(sortedItems ?? []).map((item) => (
-            <AccordionItem
-              key={item.id}
-              value={item.id}
-              className="border-b border-border px-0 last:border-b-0"
-            >
-              <AccordionTrigger
-                className="text-left font-medium text-foreground hover:no-underline hover:text-primary"
-                aria-controls={`faq-content-${item.id}`}
-                id={`faq-trigger-${item.id}`}
+            {(sortedItems ?? []).map((item) => (
+              <AccordionItem
+                key={item.id}
+                value={item.id}
+                className="border-b border-border px-0 last:border-b-0"
               >
-                {item.question}
-              </AccordionTrigger>
-              <AccordionContent
-                id={`faq-content-${item.id}`}
-                aria-labelledby={`faq-trigger-${item.id}`}
-                className="text-muted-foreground"
-              >
-                {item.answer}
-              </AccordionContent>
-            </AccordionItem>
-          ))}
+                <AccordionTrigger
+                  className="text-left font-medium text-foreground hover:no-underline hover:text-primary"
+                  aria-controls={`faq-content-${item.id}`}
+                  id={`faq-trigger-${item.id}`}
+                >
+                  {item.question}
+                </AccordionTrigger>
+                <AccordionContent
+                  id={`faq-content-${item.id}`}
+                  aria-labelledby={`faq-trigger-${item.id}`}
+                  className="text-muted-foreground"
+                >
+                  {item.answer}
+                </AccordionContent>
+              </AccordionItem>
+            )}
           </Accordion>
         ) : (
           <Accordion
@@ -117,7 +117,7 @@ export function FAQAccordion({
                   {item.answer}
                 </AccordionContent>
               </AccordionItem>
-            ))}
+            )}
           </Accordion>
         )}
       </CardContent>

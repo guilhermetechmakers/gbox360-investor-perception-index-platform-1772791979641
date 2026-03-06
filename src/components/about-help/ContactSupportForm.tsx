@@ -136,13 +136,19 @@ export function ContactSupportForm({
             role="status"
             aria-live="polite"
           >
-            <CheckCircle2 className="h-4 w-4 text-primary" aria-hidden />
+            <CheckCircle2 className="h-4 w-4 text-primary shrink-0" aria-hidden />
             <AlertDescription>
               Your ticket has been received. Reference ID:{" "}
               <strong>{ticketId}</strong>. You can{" "}
               <a
                 href="#faq"
-                className="font-medium text-primary underline hover:no-underline"
+                className="font-medium text-primary underline hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded"
+                onClick={(e) => {
+                  e.preventDefault()
+                  document.getElementById("faq")?.scrollIntoView({
+                    behavior: "smooth",
+                  })
+                }}
               >
                 view the FAQ
               </a>{" "}

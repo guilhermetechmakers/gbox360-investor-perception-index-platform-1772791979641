@@ -1,5 +1,4 @@
 import { useQuery } from "@tanstack/react-query"
-import { Link } from "react-router-dom"
 import { Navbar } from "@/components/layout/Navbar"
 import { AnimatedPage } from "@/components/AnimatedPage"
 import {
@@ -10,6 +9,7 @@ import {
   ContactSupportForm,
   LinkPanel,
   FloatingPromoCard,
+  FooterNote,
 } from "@/components/about-help"
 import { fetchFAQ, fetchOnboardingSteps } from "@/api/support"
 import { MOCK_ONBOARDING_CHECKLIST } from "@/lib/support-mock"
@@ -38,7 +38,7 @@ export default function AboutHelp() {
   const onboardingSteps = Array.isArray(onboardingData) ? onboardingData : []
 
   return (
-    <div className="min-h-screen bg-[rgb(var(--hero-bg))]">
+    <div className="min-h-screen bg-hero-bg">
       <Navbar />
       <AnimatedPage>
         <AboutHeaderHero
@@ -91,33 +91,7 @@ export default function AboutHelp() {
           </div>
         </div>
 
-        <footer className="border-t border-border bg-card py-8">
-          <div className="container flex flex-col items-center justify-between gap-4 px-4 md:flex-row">
-            <span className="text-sm text-muted-foreground">
-              © Gbox360. All rights reserved.
-            </span>
-            <div className="flex gap-6">
-              <Link
-                to="/privacy-policy"
-                className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-              >
-                Privacy Policy
-              </Link>
-              <Link
-                to="/terms"
-                className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-              >
-                Terms
-              </Link>
-              <Link
-                to="/"
-                className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-              >
-                Home
-              </Link>
-            </div>
-          </div>
-        </footer>
+        <FooterNote />
       </AnimatedPage>
     </div>
   )

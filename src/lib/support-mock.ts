@@ -96,8 +96,8 @@ export const MOCK_ONBOARDING_STEPS: OnboardingStep[] = [
 ]
 
 export const MOCK_ONBOARDING_CHECKLIST: OnboardingChecklistItem[] = [
-  { id: "check-1", label: "Email verified", completed: false },
-  { id: "check-2", label: "Added at least one company to watchlist", completed: false },
-  { id: "check-3", label: "Viewed a company IPI summary", completed: false },
-  { id: "check-4", label: "Opened drill-down view", completed: false },
+  { id: "step-1", label: "Email verified", completed: false },
+  { id: "step-2", label: "Added at least one company to watchlist", completed: false },
+  { id: "step-3", label: "Viewed a company IPI summary", completed: false },
+  { id: "step-4", label: "Opened drill-down view", completed: false },
 ]

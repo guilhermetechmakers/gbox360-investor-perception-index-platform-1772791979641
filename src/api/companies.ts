@@ -28,16 +28,20 @@ export const companiesApi = {
       throw new Error("Company not found")
     }
   },
-  search: async (query: string): Promise<Company[]> => {
+  search: async (query: string, limit = 10): Promise<Company[]> => {
     try {
-      const data = await api.get<Company[]>(`/companies/search?q=${encodeURIComponent(query)}`)
-      return Array.isArray(data) ? data : []
+      const params = new URLSearchParams({ q: query, limit: String(limit) })
+      const data = await api.get<Company[] | { data: Company[] }>(
+        `/companies/search?${params.toString()}`
+      )
+      const list = Array.isArray(data) ? data : (data as { data?: Company[] })?.data
+      return Array.isArray(list) ? list.slice(0, limit) : []
     } catch {
       const q = query.toLowerCase()
       return MOCK_COMPANIES.filter(
         (c) =>
           c.name.toLowerCase().includes(q) || c.ticker.toLowerCase().includes(q)
-      )
+      ).slice(0, limit)
     }
   },
 }
