@@ -9,12 +9,28 @@ import {
   useIPICalculateQuery,
   useNarrativesWithDecay,
 } from "@/hooks/useIPI"
+import {
+  useAuthorityBreakdown,
+  useCredibilityProxy,
+} from "@/hooks/useExplainability"
 import { useEvents } from "@/hooks/useEvents"
 import { useCompany as useCompanyDetail } from "@/hooks/useCompanies"
 import { AnimatedPage } from "@/components/AnimatedPage"
 import { SandboxModal, ExperimentPanel } from "@/components/ipi"
 import { NarrativeCard, DecayGauge, NarrativeEventCard, ReplayPanel, NarrativeFilters } from "@/components/narrative"
+import {
+  AuthorityBreakdownCard,
+  CredibilityProxyCard,
+  RawPayloadPanel,
+} from "@/components/explainability"
 import { windowToDateRange } from "@/lib/date-utils"
+import {
+  exportNarrativesToCsv,
+  exportEventsToCsv,
+  exportToJson,
+  downloadCsv,
+  downloadJson,
+} from "@/lib/export-utils"
 import {
   BarChart,
   Bar,
@@ -25,7 +41,7 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts"
-import { Beaker, BarChart2 } from "lucide-react"
+import { Beaker, BarChart2, Download, FileJson } from "lucide-react"
 import { ipiApi } from "@/api/ipi"
 import type { NarrativeEvent } from "@/types/narrative"
 
@@ -67,9 +83,68 @@ export default function DrillDown() {
     `${start}T00:00:00.000Z`,
     `${end}T23:59:59.999Z`
   )
+  const { sources: authoritySources, isLoading: authorityLoading } = useAuthorityBreakdown(
+    id,
+    start,
+    end
+  )
+  const { proxies: credibilityProxies, isLoading: credibilityLoading } = useCredibilityProxy(
+    id,
+    start,
+    end
+  )
   const eventsList = Array.isArray(events) ? events : []
   const narrativesDecay = Array.isArray(narrativesWithDecay) ? narrativesWithDecay : []
   const displayEvents = eventsFromApi.length > 0 ? eventsFromApi : eventsList
+
+  /** Unique payload refs for raw payload panel (event_id or source_payload_id) */
+  const payloadRefs = useMemo(() => {
+    const list = (displayEvents ?? []) as Array<{ event_id?: string; source_payload_id?: string; raw_text?: string }>
+    const seen = new Set<string>()
+    return list
+      .map((ev) => {
+        const refId = ev?.source_payload_id ?? ev?.event_id ?? ""
+        if (!refId || seen.has(refId)) return null
+        seen.add(refId)
+        return {
+          id: refId,
+          eventId: ev?.event_id ?? refId,
+          label: (ev?.raw_text ?? refId).toString().slice(0, 50),
+        }
+      })
+      .filter((r): r is { id: string; eventId: string; label: string } => r != null)
+  }, [displayEvents])
+
+  const handleExportCsv = () => {
+    const narrativeRows = narrativesDecay.map((n) => ({
+      id: n.id,
+      source: "",
+      platform: "",
+      rawText: n.name ?? "",
+      timestamp: n.lastUpdated ?? "",
+      weight: n.weight,
+    }))
+    const eventRows = (displayEvents ?? []).map((ev: NarrativeEvent) => ({
+      id: ev.event_id ?? "",
+      narrativeId: "",
+      type: "narrative",
+      timestamp: ev.published_at ?? ev.created_at ?? "",
+      payloadRef: (ev as { source_payload_id?: string }).source_payload_id ?? "",
+    }))
+    downloadCsv(
+      exportNarrativesToCsv(narrativeRows) + "\n\n" + exportEventsToCsv(eventRows),
+      `drilldown-${id}-${start}-${end}`
+    )
+  }
+
+  const handleExportJson = () => {
+    const payload = {
+      narratives: narrativesDecay,
+      events: displayEvents ?? [],
+      exportedAt: new Date().toISOString(),
+    }
+    downloadJson(exportToJson(payload), `drilldown-${id}-${start}-${end}`)
+  }
 
   const handleSandboxRun = async (weights: {
     narrative: number
@@ -112,6 +187,28 @@ export default function DrillDown() {
               <Beaker className="h-4 w-4" />
               Sandbox
             </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={handleExportCsv}
+                aria-label="Export to CSV"
+              >
+                <Download className="h-4 w-4" />
+                CSV
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={handleExportJson}
+                aria-label="Export to JSON"
+              >
+                <FileJson className="h-4 w-4" />
+                JSON
+              </Button>
+            </div>
           </div>
           <NarrativeFilters
             timeWindow={validWindow}
@@ -160,6 +257,18 @@ export default function DrillDown() {
             )}
           </CardContent>
         </Card>
+
+        {/* Authority & Credibility breakdowns */}
+        <div className="grid gap-6 lg:grid-cols-2">
+          <AuthorityBreakdownCard
+            sources={authoritySources}
+            isLoading={authorityLoading}
+          />
+          <CredibilityProxyCard
+            proxies={credibilityProxies}
+            isLoading={credibilityLoading}
+          />
+        </div>
 
         <ExperimentPanel
           companyId={id}
@@ -252,6 +361,9 @@ export default function DrillDown() {
             )}
           </CardContent>
         </Card>
+
+        {/* Raw payload evidence */}
+        <RawPayloadPanel companyId={id} payloadRefs={payloadRefs} />
       </div>
 
       <SandboxModal

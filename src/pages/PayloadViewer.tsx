@@ -1,15 +1,44 @@
 import { useParams, Link } from "react-router-dom"
+import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { AnimatedPage } from "@/components/AnimatedPage"
 import { useNarrativeById } from "@/hooks/useIPI"
+import { fetchPayloadDownloadUrl } from "@/hooks/useExplainability"
 import { Download, ArrowLeft, BarChart2, Shield } from "lucide-react"
 
 export default function PayloadViewer() {
   const { eventId } = useParams<{ eventId: string }>()
   const id = eventId ?? null
   const { data: narrative, isLoading, error } = useNarrativeById(id)
+  const [downloading, setDownloading] = useState(false)
+
+  const handleDownload = async () => {
+    if (!id) return
+    setDownloading(true)
+    try {
+      const url = await fetchPayloadDownloadUrl(id)
+      if (url) {
+        const a = document.createElement("a")
+        a.href = url
+        a.download = `payload-${id}.json`
+        a.click()
+      } else if (narrative?.raw_payload != null) {
+        const blob = new Blob([JSON.stringify(narrative.raw_payload, null, 2)], {
+          type: "application/json",
+        })
+        const u = URL.createObjectURL(blob)
+        const a = document.createElement("a")
+        a.href = u
+        a.download = `payload-${id}.json`
+        a.click()
+        URL.revokeObjectURL(u)
+      }
+    } finally {
+      setDownloading(false)
+    }
+  }
 
   return (
     <AnimatedPage>
@@ -152,9 +181,15 @@ export default function PayloadViewer() {
                     2
                   )}
                 </pre>
-                <Button variant="outline" className="mt-4 gap-2">
+                <Button
+                  variant="outline"
+                  className="mt-4 gap-2"
+                  onClick={handleDownload}
+                  disabled={downloading}
+                  aria-label="Download raw payload"
+                >
                   <Download className="h-4 w-4" />
-                  Download
+                  {downloading ? "Preparing…" : "Download"}
                 </Button>
               </CardContent>
             </Card>
