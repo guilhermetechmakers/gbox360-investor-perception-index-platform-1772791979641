@@ -1,8 +1,19 @@
 import { CompanyTimeWindowSelect } from "@/components/dashboard/CompanyTimeWindowSelect"
 import { DateRangePicker } from "@/components/ipi"
 import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Label } from "@/components/ui/label"
 import { Search } from "lucide-react"
 import { cn } from "@/lib/utils"
+
+const PLATFORM_OPTIONS = ["news", "social", "transcripts", ""]
+const SOURCE_OPTIONS = ["analyst", "media", "retail", "corporate", ""]
 
 interface NarrativeFiltersProps {
   timeWindow: string
@@ -16,6 +27,10 @@ interface NarrativeFiltersProps {
   narrativeTags?: string[]
   selectedTag?: string
   onTagSelect?: (tag: string | null) => void
+  source?: string
+  onSourceChange?: (value: string) => void
+  platform?: string
+  onPlatformChange?: (value: string) => void
   className?: string
 }
 
@@ -31,6 +46,10 @@ export function NarrativeFilters({
   narrativeTags = [],
   selectedTag,
   onTagSelect,
+  source = "",
+  onSourceChange,
+  platform = "",
+  onPlatformChange,
   className,
 }: NarrativeFiltersProps) {
   const tags = Array.isArray(narrativeTags) ? narrativeTags : []
@@ -45,6 +64,38 @@ export function NarrativeFilters({
           onStartChange={onDateStartChange}
           onEndChange={onDateEndChange}
         />
+        {onSourceChange && (
+          <div className="space-y-1.5">
+            <Label htmlFor="filter-source" className="sr-only">Source</Label>
+            <Select value={source || "all"} onValueChange={(v) => onSourceChange(v === "all" ? "" : v)}>
+              <SelectTrigger id="filter-source" className="w-[140px]">
+                <SelectValue placeholder="Source" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All sources</SelectItem>
+                {SOURCE_OPTIONS.filter(Boolean).map((s) => (
+                  <SelectItem key={s} value={s}>{s}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+        {onPlatformChange && (
+          <div className="space-y-1.5">
+            <Label htmlFor="filter-platform" className="sr-only">Platform</Label>
+            <Select value={platform || "all"} onValueChange={(v) => onPlatformChange(v === "all" ? "" : v)}>
+              <SelectTrigger id="filter-platform" className="w-[140px]">
+                <SelectValue placeholder="Platform" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All platforms</SelectItem>
+                {PLATFORM_OPTIONS.filter(Boolean).map((p) => (
+                  <SelectItem key={p} value={p}>{p}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
         {onSearchChange && (
           <div className="relative flex-1 min-w-[200px]">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />

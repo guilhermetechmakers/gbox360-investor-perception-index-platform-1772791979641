@@ -486,6 +486,69 @@ Deno.serve(async (req) => {
       return json({ success: true, narrative_id: narrativeIdParam })
     }
 
+    // GET /events?companyId=&start=&end=&source=&platform=&limit= — NarrativeEvents with filters
+    if (req.method === "GET" && (segments[0] === "events" || path === "events")) {
+      const eventIdParam = segments[1] && segments[1] !== "events" ? segments[1] : null
+      if (eventIdParam) {
+        const one = supabase ? await getNarrativeById(supabase, eventIdParam) : null
+        const ev = one as Record<string, unknown> | null
+        const out = ev ? {
+          event_id: ev.id ?? eventIdParam,
+          company_id: ev.company_id,
+          source: ev.source_platform ?? ev.source ?? "unknown",
+          platform: ev.platform,
+          speaker: { entity: ev.speaker_entity ?? "—", inferred_role: ev.speaker_role },
+          raw_text: ev.raw_text ?? "",
+          published_at: ev.created_at ?? ev.published_at,
+          ingested_at: ev.created_at ?? ev.ingested_at,
+          authority_score: Number(ev.authority_weight ?? 0),
+          credibility_proxy: Number(ev.credibility_proxy ?? 0),
+          narrative_topic_ids: [],
+          created_at: ev.created_at,
+        } : null
+        return json(out ?? { error: "Event not found" })
+      }
+      const companyId = url.searchParams.get("companyId") ?? ""
+      const start = url.searchParams.get("start") ?? ""
+      const end = url.searchParams.get("end") ?? ""
+      const sourceFilter = url.searchParams.get("source") ?? ""
+      const platformFilter = url.searchParams.get("platform") ?? ""
+      const limitParam = url.searchParams.get("limit")
+      const limit = limitParam ? Math.min(100, Math.max(1, parseInt(limitParam, 10) || 50)) : 50
+      if (!supabase || !companyId || !start || !end) {
+        return json([])
+      }
+      let q = supabase
+        .from("narrative_events")
+        .select("*")
+        .eq("company_id", companyId)
+        .gte("created_at", `${start}T00:00:00.000Z`)
+        .lte("created_at", `${end}T23:59:59.999Z`)
+        .order("created_at", { ascending: false })
+        .limit(limit)
+      if (sourceFilter) q = q.eq("source", sourceFilter)
+      if (platformFilter) q = q.eq("platform", platformFilter)
+      const { data: rows, error } = await q
+      if (error) return json([])
+      const list = (rows ?? []).map((r: Record<string, unknown>) => ({
+        event_id: r.id,
+        company_id: r.company_id,
+        source: r.source ?? r.source_platform ?? "unknown",
+        platform: r.platform,
+        speaker: { entity: r.speaker_entity ?? "—", inferred_role: r.speaker_role },
+        audience_class: r.audience_class,
+        raw_text: r.raw_text ?? "",
+        published_at: r.created_at ?? r.published_at,
+        ingested_at: r.created_at ?? r.ingested_at,
+        source_payload_id: r.source_payload_id,
+        authority_score: Number(r.authority_weight ?? 0),
+        credibility_proxy: Number(r.credibility_proxy ?? 0),
+        narrative_topic_ids: Array.isArray(r.narrative_topic_ids) ? r.narrative_topic_ids : [],
+        created_at: r.created_at,
+      }))
+      return json(list)
+    }
+
     // GET /narratives?companyId=&start=&end= — returns narratives with decay-weighted scores (topics) or legacy events
     if (req.method === "GET" && (segments[0] === "narratives" || path === "narratives")) {
       const narrativeIdParam = segments[1] && segments[1] !== "events" ? segments[1] : null

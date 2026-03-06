@@ -129,3 +129,57 @@ Run: `npm run test -- --run src/lib/decay.test.ts src/lib/topic-classification.t
 - **ingestion_payloads**: id, company_id, source, payload (JSONB), ingested_at, status (pending | ingested | failed | retried), narrative_event_id (FK).
 
 See `supabase/migrations/20250306000001_create_narrative_schema.sql` for full schema.
+
+---
+
+## 7. Canonical NarrativeEvent Model & Events API
+
+### Events API
+
+| Method | Path | Purpose |
+|--------|------|--------|
+| GET | /api/events?company_id=&start=&end=&limit=&source_id=&platform= | List narrative events for a company and time window; optional filters. |
+| GET | /api/events/:event_id | Single narrative event by id (provenance, payload link). |
+
+**Response shape (list):** `{ data: NarrativeEvent[], count: number }`. Use `(response?.data ?? []).map(...)` on the client.
+
+### Ingestion (canonical)
+
+| Method | Path | Purpose |
+|--------|------|--------|
+| POST | /api/ingest/news | Ingest news payload; idempotent by payload_id. |
+| POST | /api/ingest/social | Ingest social payload; rate-limited. |
+| POST | /api/ingest/transcripts | Ingest earnings transcripts (batched). |
+
+Body: `company_id`, `platform`, `raw_text`, `published_at`; optional: `source_id`, `speaker_entity`, `speaker_role_inferred`, `audience_class`, `payload_id`.
+
+### Replay
+
+| Method | Path | Purpose |
+|--------|------|--------|
+| POST | /api/replay/payload | Replay single payload by `payload_id`; idempotent. |
+| POST | /api/replay/window | Replay events in time window for `company_id`; idempotent. |
+
+### IPI
+
+| Method | Path | Purpose |
+|--------|------|--------|
+| POST | /api/ipi/calculate | Compute IPI for company + time window; returns score, components, top_narratives. |
+| POST | /api/ipi/sandbox | Simulate IPI with custom weights (narrative, credibility, risk). |
+
+### Testing Company View & Drill-down
+
+1. **Company view** — Open `/dashboard/company/<companyId>?window=1W`. Confirm IPIBadge (score + delta) and IPI sparkline. Confirm Top contributing narratives and Event timeline; use Sandbox for simulated weights.
+2. **Drill-down page** — Open `/dashboard/company/<companyId>/drill-down?window=1W`. Use NarrativeFilters (time window, source, platform). Confirm ReplayPanel and Narrative events list with NarrativeEventCard (immutable badge, provenance link).
+3. **Admin audit logs** — Open `/admin/audit-logs`. Filter by event type, tenant, actor, date; view raw payload. Use Admin → Data Replay to trigger replay.
+
+### Admin vs user flows (canonical)
+
+- **Viewer**: Company view, drill-down, payload viewer; read-only.
+- **Admin**: Same + audit logs, replay trigger, export.
+- **Ingest**: POST /api/ingest/* (INGEST role); replay and admin require ADMIN.
+
+### Extending: SSO and webhooks
+
+- **SSO**: JWT carries roles (VIEWER, INGEST, ADMIN); enforce in Edge Functions for /api/ingest/*, /api/replay/*, /api/admin/*.
+- **Webhooks**: Outbound after ingest/replay; inbound POST /webhooks/inbound to validate and call ingest logic.

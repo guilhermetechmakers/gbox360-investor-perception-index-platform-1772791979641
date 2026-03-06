@@ -1,3 +1,6 @@
 export { DecayGauge } from "./DecayGauge"
 export { NarrativeCard } from "./NarrativeCard"
+export { NarrativeEventCard } from "./NarrativeEventCard"
 export { DrillDownPanel } from "./DrillDownPanel"
+export { ReplayPanel } from "./ReplayPanel"
+export { NarrativeFilters } from "./NarrativeFilters"

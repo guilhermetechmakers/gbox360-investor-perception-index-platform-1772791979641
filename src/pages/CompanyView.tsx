@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   useIPICurrent,
+  useIPITimeseries,
   useTopNarratives,
   useIPIEvents,
   useIPICalculateQuery,
@@ -14,13 +15,14 @@ import { useNarrativesWithDecay } from "@/hooks/useNarratives"
 import { useCompany as useCompanyDetail } from "@/hooks/useCompanies"
 import { AnimatedPage } from "@/components/AnimatedPage"
 import { CompanyTimeWindowSelect } from "@/components/dashboard/CompanyTimeWindowSelect"
-import { DateRangePicker, IPIBreakdownPanel, SandboxModal } from "@/components/ipi"
+import { DateRangePicker, IPIBadge, IPIBreakdownPanel, SandboxModal } from "@/components/ipi"
 import { NarrativeCard, DecayGauge, DrillDownPanel } from "@/components/narrative"
 import { useModals } from "@/components/modals"
 import { ipiApi } from "@/api/ipi"
 import { windowToDateRange } from "@/lib/date-utils"
 import type { NarrativeEvent, NarrativeWithDecay } from "@/types/narrative"
-import { ArrowDownRight, ArrowUpRight, Download, Flag, FileJson, Beaker } from "lucide-react"
+import { Download, Flag, FileJson, Beaker } from "lucide-react"
+import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts"
 
 export default function CompanyView() {
   const { companyId } = useParams<{ companyId: string }>()
@@ -86,6 +88,7 @@ export default function CompanyView() {
 
   const { data: company, isLoading: companyLoading } = useCompanyDetail(id)
   const { data: ipi, isLoading: ipiLoading } = useIPICurrent(id, validWindow)
+  const { data: timeseriesData } = useIPITimeseries(id, validWindow)
   const { data: narrativesData, isLoading: narrativesLoading } = useTopNarratives(id, validWindow, 3)
   const { data: narrativesWithDecayData, isLoading: narrativesWithDecayLoading } = useNarrativesWithDecay(
     id,
@@ -228,29 +231,65 @@ export default function CompanyView() {
             {ipiLoading ? (
               <Skeleton className="h-32 w-full" />
             ) : ipi ? (
-              <div className="flex flex-wrap items-center gap-8">
-                <div className="flex items-baseline gap-2">
-                  <span className="font-display text-4xl font-bold text-foreground">
-                    {calculateResult?.totalScore ?? ipi.score}
-                  </span>
-                  <span className="text-muted-foreground">/ 100</span>
+              <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-wrap items-center gap-6">
+                  <IPIBadge
+                    score={calculateResult?.totalScore ?? ipi.score}
+                    delta={ipi.delta}
+                    maxScore={100}
+                    size="lg"
+                    showDelta
+                  />
+                  <div className="text-sm text-muted-foreground">
+                    Narrative {(calculateResult?.narrativeScore ?? ipi.narrative_component)?.toFixed(1)} · Credibility{" "}
+                    {(calculateResult?.credibilityScore ?? ipi.credibility_component)?.toFixed(1)} · Risk{" "}
+                    {(calculateResult?.riskScore ?? ipi.risk_component)?.toFixed(1)}
+                  </div>
                 </div>
-                <div className="flex items-center gap-1 text-lg">
-                  {(ipi.delta ?? 0) >= 0 ? (
-                    <ArrowUpRight className="h-5 w-5 text-green-600" />
-                  ) : (
-                    <ArrowDownRight className="h-5 w-5 text-red-600" />
-                  )}
-                  <span className={(ipi.delta ?? 0) >= 0 ? "text-green-600" : "text-red-600"}>
-                    {(ipi.delta ?? 0) >= 0 ? "+" : ""}
-                    {ipi.delta ?? 0}
-                  </span>
-                </div>
-                <div className="text-sm text-muted-foreground">
-                  Narrative {(calculateResult?.narrativeScore ?? ipi.narrative_component)?.toFixed(1)} · Credibility{" "}
-                  {(calculateResult?.credibilityScore ?? ipi.credibility_component)?.toFixed(1)} · Risk{" "}
-                  {(calculateResult?.riskScore ?? ipi.risk_component)?.toFixed(1)}
-                </div>
+                {Array.isArray(timeseriesData) && timeseriesData.length > 0 && (
+                  <div className="h-16 w-full min-w-[200px] max-w-[280px] sm:h-20">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart
+                        data={timeseriesData}
+                        margin={{ top: 4, right: 4, left: 4, bottom: 4 }}
+                      >
+                        <defs>
+                          <linearGradient id="ipiGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="rgb(var(--primary))" stopOpacity={0.4} />
+                            <stop offset="100%" stopColor="rgb(var(--primary))" stopOpacity={0.05} />
+                          </linearGradient>
+                        </defs>
+                        <XAxis
+                          dataKey="timestamp"
+                          hide
+                          tickFormatter={(v) => new Date(v).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                        />
+                        <YAxis hide domain={[0, 100]} />
+                        <Tooltip
+                          content={({ payload }) =>
+                            payload?.[0] ? (
+                              <div className="rounded-lg border border-border bg-card px-3 py-2 text-xs shadow-card">
+                                {new Date(payload[0].payload.timestamp).toLocaleDateString(undefined, {
+                                  month: "short",
+                                  day: "numeric",
+                                  year: "numeric",
+                                })}
+                                : {(payload[0].value as number)?.toFixed(1)} IPI
+                              </div>
+                            ) : null
+                          }
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="score"
+                          stroke="rgb(var(--primary))"
+                          strokeWidth={2}
+                          fill="url(#ipiGradient)"
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
               </div>
             ) : (
               <p className="text-muted-foreground">No IPI data for this window.</p>

@@ -1,3 +1,4 @@
 export { DateRangePicker } from "./DateRangePicker"
+export { IPIBadge } from "./IPIBadge"
 export { IPIBreakdownPanel } from "./IPIBreakdownPanel"
 export { SandboxModal } from "./SandboxModal"

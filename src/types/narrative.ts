@@ -15,7 +15,7 @@ export interface ClassificationRationale {
   embedding_proximity?: { narrative_id: string; similarity: number }
 }
 
-/** Canonical NarrativeEvent - immutable append-only schema */
+/** Canonical NarrativeEvent - immutable append-only schema (DB/API) */
 export interface NarrativeEventCanonical {
   id: string
   company_id: string
@@ -34,12 +34,31 @@ export interface NarrativeEventCanonical {
   decay_score: number
   is_persistent: boolean
   raw_payload?: Record<string, unknown>
-  /** Why this event was assigned to a topic (rules / embedding) */
   classification_rationale?: ClassificationRationale
-  /** Legacy / API compatibility */
   source_type?: string
   published_at?: string
   ingested_at?: string
+}
+
+/** Spec-aligned canonical NarrativeEvent (event_id, source_id, provenance, version) */
+export interface NarrativeEventSpec {
+  event_id: string
+  source_id: string
+  platform: string
+  speaker_entity: string
+  speaker_role_inferred?: string
+  audience_class?: string
+  raw_text: string
+  published_at: string
+  ingested_at: string
+  source_payload_id?: string
+  authority_score?: number
+  credibility_proxy_scores?: Record<string, number>
+  narrative_topic_ids: string[]
+  company_id: string
+  version: number
+  created_at: string
+  updated_at?: string
 }
 
 /** API/legacy NarrativeEvent shape */
