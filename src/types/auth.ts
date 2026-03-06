@@ -12,6 +12,7 @@ export interface SignUpInput {
   companyName: string
   userRole: UserRole
   agreeToTOS: boolean
+  termsVersion?: string
   full_name?: string
   company?: string
   role?: string

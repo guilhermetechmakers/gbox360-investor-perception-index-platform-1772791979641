@@ -16,6 +16,7 @@ function normalizeSignUpPayload(credentials: SignUpInput): Record<string, unknow
     company: credentials.companyName.trim(),
     role: credentials.userRole,
     accept_tos: credentials.agreeToTOS,
+    terms_version: credentials.termsVersion,
     full_name: credentials.full_name?.trim(),
   }
 }

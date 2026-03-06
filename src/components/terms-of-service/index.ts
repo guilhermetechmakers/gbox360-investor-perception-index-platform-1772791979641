@@ -1,0 +1,6 @@
+export { TermsContainer } from "./TermsContainer"
+export { SectionCard } from "./SectionCard"
+export { VersionBadge } from "./VersionBadge"
+export { ContactLegalLink } from "./ContactLegalLink"
+export { AcceptTermsInline } from "./AcceptTermsInline"
+export { LegalFooter } from "./LegalFooter"

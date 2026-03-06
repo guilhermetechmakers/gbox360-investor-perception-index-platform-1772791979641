@@ -25,6 +25,7 @@ import AdminUserManagement from "@/pages/AdminUserManagement"
 import NotFound from "@/pages/NotFound"
 import AboutHelp from "@/pages/AboutHelp"
 import PrivacyPolicy from "@/pages/PrivacyPolicy"
+import TermsOfService from "@/pages/TermsOfService"
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -47,6 +48,8 @@ function App() {
           <Route path="/about-help" element={<AboutHelp />} />
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route path="/privacy" element={<Navigate to="/privacy-policy" replace />} />
+          <Route path="/terms" element={<TermsOfService />} />
+          <Route path="/legal/terms" element={<Navigate to="/terms" replace />} />
           <Route path="/auth" element={<UnifiedAuthPage />} />
           <Route path="/login" element={<Navigate to="/auth?tab=login" replace />} />
           <Route path="/signup" element={<Navigate to="/auth?tab=signup" replace />} />

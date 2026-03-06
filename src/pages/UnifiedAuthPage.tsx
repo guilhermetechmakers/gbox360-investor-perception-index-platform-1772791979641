@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Checkbox } from "@/components/ui/checkbox"
+import { AcceptTermsInline } from "@/components/terms-of-service"
 import {
   Select,
   SelectContent,
@@ -22,6 +23,7 @@ import { MFAPromptModal } from "@/components/auth/MFAPromptModal"
 import { SSOLoginButton } from "@/components/auth/SSOLoginButton"
 import { InlineErrorBox } from "@/components/auth/InlineErrorBox"
 import type { SignInInput, SignUpInput, UserRole } from "@/types/auth"
+import { TERMS_VERSION } from "@/content/terms-of-service"
 import { ArrowLeft, Loader2 } from "lucide-react"
 
 const loginSchema = z.object({
@@ -252,28 +254,11 @@ function SignupForm({
           </p>
         )}
       </div>
-      <div className="flex items-start gap-2">
-        <Checkbox
-          id="agree-tos"
-          checked={agreeToTOS}
-          onCheckedChange={(checked) => setValue("agreeToTOS", checked === true)}
-          aria-describedby="agree-tos-label"
-          className="mt-0.5"
-        />
-        <div className="space-y-1">
-          <Label htmlFor="agree-tos" id="agree-tos-label" className="text-sm font-normal cursor-pointer leading-tight">
-            I accept the{" "}
-            <Link to="/terms" className="text-primary hover:underline">
-              Terms of Service
-            </Link>
-          </Label>
-          {errors.agreeToTOS && (
-            <p className="text-sm text-red-600" role="alert">
-              {errors.agreeToTOS.message}
-            </p>
-          )}
-        </div>
-      </div>
+      <AcceptTermsInline
+        checked={agreeToTOS}
+        onChange={(checked) => setValue("agreeToTOS", checked)}
+        error={errors.agreeToTOS?.message}
+      />
       <Button type="submit" className="w-full rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 focus-visible:ring-ring disabled:opacity-70" disabled={isLoading}>
         {isLoading ? (
           <>
@@ -346,6 +331,7 @@ export default function UnifiedAuthPage() {
       companyName: data.companyName.trim(),
       userRole: data.userRole,
       agreeToTOS: data.agreeToTOS,
+      termsVersion: TERMS_VERSION,
     }
     signUp.mutate(payload, {
       onSuccess: () => navigate("/verify-email"),
