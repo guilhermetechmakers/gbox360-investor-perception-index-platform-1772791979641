@@ -1,25 +1,28 @@
 /**
  * FilterPanel — Filters for NarrativeEvents and IPI timelines.
- * Date range, event type, timeline presets. Safe defaults for arrays/objects.
+ * Time window, source type, speaker role, authority band. URL-persisted state; safe defaults.
  */
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
+import { useSearchParams } from "react-router-dom"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Filter } from "lucide-react"
 import { cn } from "@/lib/utils"
+import {
+  SOURCE_TYPES,
+  SPEAKER_ROLES,
+  AUTHORITY_BANDS,
+} from "@/types/search-filter"
 
 const TIMELINE_PRESETS = [
   { id: "1D", label: "1 Day" },
   { id: "1W", label: "1 Week" },
+  { id: "2W", label: "2 Weeks" },
+  { id: "30d", label: "30 Days" },
+  { id: "90d", label: "90 Days" },
   { id: "1M", label: "1 Month" },
-] as const
-
-const EVENT_TYPES = [
-  { id: "news", label: "News" },
-  { id: "social", label: "Social" },
-  { id: "transcript", label: "Transcript" },
 ] as const
 
 export interface FilterState {
@@ -27,11 +30,17 @@ export interface FilterState {
   to?: string
   eventTypes: string[]
   timelinePreset: string
+  roles: string[]
+  authorityBands: string[]
 }
 
 interface FilterPanelProps {
   onFiltersChange?: (filters: FilterState) => void
   className?: string
+  /** When set, show "X results" for real-time feedback. */
+  resultCount?: number | null
+  /** When true, read/write filter state to URL query params for shareable links. */
+  persistToUrl?: boolean
 }
 
 const defaultFrom = () => {
@@ -41,13 +50,77 @@ const defaultFrom = () => {
 }
 const defaultTo = () => new Date().toISOString().slice(0, 10)
 
-export function FilterPanel({ onFiltersChange, className }: FilterPanelProps) {
-  const [filters, setFilters] = useState<FilterState>({
-    from: defaultFrom(),
-    to: defaultTo(),
-    eventTypes: [],
-    timelinePreset: "1W",
+const URL_KEYS = {
+  window: "window",
+  from: "from",
+  to: "to",
+  sources: "sources",
+  roles: "roles",
+  authority: "authority",
+} as const
+
+function parseArrayParam(value: string | null): string[] {
+  if (!value || typeof value !== "string") return []
+  return value.split(",").filter(Boolean)
+}
+
+export function FilterPanel({
+  onFiltersChange,
+  className,
+  resultCount,
+  persistToUrl = true,
+}: FilterPanelProps) {
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  const [filters, setFilters] = useState<FilterState>(() => {
+    if (!persistToUrl) {
+      return {
+        from: defaultFrom(),
+        to: defaultTo(),
+        eventTypes: [],
+        timelinePreset: "1W",
+        roles: [],
+        authorityBands: [],
+      }
+    }
+    const from = searchParams.get(URL_KEYS.from) ?? defaultFrom()
+    const to = searchParams.get(URL_KEYS.to) ?? defaultTo()
+    const windowPreset = searchParams.get(URL_KEYS.window) ?? "1W"
+    const eventTypes = parseArrayParam(searchParams.get(URL_KEYS.sources))
+    const roles = parseArrayParam(searchParams.get(URL_KEYS.roles))
+    const authorityBands = parseArrayParam(searchParams.get(URL_KEYS.authority))
+    return {
+      from,
+      to,
+      eventTypes,
+      timelinePreset: TIMELINE_PRESETS.some((p) => p.id === windowPreset)
+        ? windowPreset
+        : "1W",
+      roles,
+      authorityBands,
+    }
   })
+
+  useEffect(() => {
+    if (!persistToUrl) return
+    const next = new URLSearchParams(searchParams)
+    next.set(URL_KEYS.window, filters.timelinePreset)
+    if (filters.from) next.set(URL_KEYS.from, filters.from)
+    if (filters.to) next.set(URL_KEYS.to, filters.to)
+    if ((filters.eventTypes ?? []).length > 0)
+      next.set(URL_KEYS.sources, (filters.eventTypes ?? []).join(","))
+    else next.delete(URL_KEYS.sources)
+    if ((filters.roles ?? []).length > 0)
+      next.set(URL_KEYS.roles, (filters.roles ?? []).join(","))
+    else next.delete(URL_KEYS.roles)
+    if ((filters.authorityBands ?? []).length > 0)
+      next.set(URL_KEYS.authority, (filters.authorityBands ?? []).join(","))
+    else next.delete(URL_KEYS.authority)
+    const nextStr = next.toString()
+    if (nextStr !== searchParams.toString()) {
+      setSearchParams(next, { replace: true })
+    }
+  }, [persistToUrl, filters, searchParams, setSearchParams])
 
   const updateFilters = useCallback(
     (updates: Partial<FilterState>) => {
@@ -69,6 +142,26 @@ export function FilterPanel({ onFiltersChange, className }: FilterPanelProps) {
     [filters.eventTypes, updateFilters]
   )
 
+  const handleRoleToggle = useCallback(
+    (id: string, checked: boolean) => {
+      const current = filters.roles ?? []
+      const next = checked ? [...current, id] : current.filter((r) => r !== id)
+      updateFilters({ roles: next })
+    },
+    [filters.roles, updateFilters]
+  )
+
+  const handleAuthorityToggle = useCallback(
+    (id: string, checked: boolean) => {
+      const current = filters.authorityBands ?? []
+      const next = checked
+        ? [...current, id]
+        : current.filter((b) => b !== id)
+      updateFilters({ authorityBands: next })
+    },
+    [filters.authorityBands, updateFilters]
+  )
+
   const handlePresetSelect = useCallback(
     (id: string) => {
       updateFilters({ timelinePreset: id })
@@ -77,13 +170,27 @@ export function FilterPanel({ onFiltersChange, className }: FilterPanelProps) {
   )
 
   const eventTypes = filters.eventTypes ?? []
+  const roles = filters.roles ?? []
+  const authorityBands = filters.authorityBands ?? []
+  const count =
+    resultCount != null && Number.isFinite(resultCount) ? resultCount : null
 
   return (
     <Card className={cn("rounded-[18px] shadow-card border-border", className)}>
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-lg font-display">
-          <Filter className="h-5 w-5 text-primary" aria-hidden />
-          Filters
+        <CardTitle className="flex items-center justify-between gap-2 text-lg font-display">
+          <span className="flex items-center gap-2">
+            <Filter className="h-5 w-5 text-primary" aria-hidden />
+            Filters
+          </span>
+          {count !== null && (
+            <span
+              className="text-sm font-normal text-muted-foreground"
+              aria-live="polite"
+            >
+              {count} result{count !== 1 ? "s" : ""}
+            </span>
+          )}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -96,7 +203,9 @@ export function FilterPanel({ onFiltersChange, className }: FilterPanelProps) {
               id="filter-from"
               type="date"
               value={filters.from ?? ""}
-              onChange={(e) => updateFilters({ from: e.target.value || undefined })}
+              onChange={(e) =>
+                updateFilters({ from: e.target.value || undefined })
+              }
               className="mt-1 rounded-lg"
               aria-label="Filter from date"
             />
@@ -109,14 +218,16 @@ export function FilterPanel({ onFiltersChange, className }: FilterPanelProps) {
               id="filter-to"
               type="date"
               value={filters.to ?? ""}
-              onChange={(e) => updateFilters({ to: e.target.value || undefined })}
+              onChange={(e) =>
+                updateFilters({ to: e.target.value || undefined })
+              }
               className="mt-1 rounded-lg"
               aria-label="Filter to date"
             />
           </div>
         </div>
         <div>
-          <Label className="text-sm">Timeline preset</Label>
+          <Label className="text-sm">Time window</Label>
           <div className="mt-2 flex flex-wrap gap-2">
             {TIMELINE_PRESETS.map((preset) => (
               <button
@@ -138,9 +249,9 @@ export function FilterPanel({ onFiltersChange, className }: FilterPanelProps) {
           </div>
         </div>
         <div>
-          <Label className="text-sm">Event type</Label>
+          <Label className="text-sm">Source type</Label>
           <div className="mt-2 flex flex-wrap gap-4">
-            {EVENT_TYPES.map((type) => (
+            {SOURCE_TYPES.map((type) => (
               <label
                 key={type.id}
                 className="flex cursor-pointer items-center gap-2 text-sm"
@@ -157,6 +268,52 @@ export function FilterPanel({ onFiltersChange, className }: FilterPanelProps) {
             ))}
           </div>
         </div>
+        <div>
+          <Label className="text-sm">Speaker role</Label>
+          <div className="mt-2 flex flex-wrap gap-4">
+            {SPEAKER_ROLES.map((role) => (
+              <label
+                key={role.id}
+                className="flex cursor-pointer items-center gap-2 text-sm"
+              >
+                <Checkbox
+                  checked={roles.includes(role.id)}
+                  onCheckedChange={(checked) =>
+                    handleRoleToggle(role.id, !!checked)
+                  }
+                  aria-label={`Filter by ${role.label}`}
+                />
+                <span>{role.label}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+        <div>
+          <Label className="text-sm">Authority band</Label>
+          <div className="mt-2 flex flex-wrap gap-4">
+            {AUTHORITY_BANDS.map((band) => (
+              <label
+                key={band.id}
+                className="flex cursor-pointer items-center gap-2 text-sm"
+              >
+                <Checkbox
+                  checked={authorityBands.includes(band.id)}
+                  onCheckedChange={(checked) =>
+                    handleAuthorityToggle(band.id, !!checked)
+                  }
+                  aria-label={`Filter by ${band.label} authority`}
+                />
+                <span>{band.label}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+        {count === 0 && (
+          <p className="text-sm text-muted-foreground" role="status">
+            No results match the current filters. Try widening the time window
+            or clearing some filters.
+          </p>
+        )}
       </CardContent>
     </Card>
   )

@@ -1,10 +1,11 @@
 /**
  * ActionBar — Primary and secondary navigation actions for 404 page.
  * Primary: Go to Dashboard (green). Secondary: Go to Landing Page (teal/gray-teal).
+ * Accessible labels and clear guidance.
  */
-import { Link } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
-import { LayoutDashboard, Home } from "lucide-react"
+import { LayoutDashboard, Home, ArrowLeft } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface ActionBarProps {
@@ -12,12 +13,25 @@ interface ActionBarProps {
 }
 
 export function ActionBar({ className }: ActionBarProps) {
+  const navigate = useNavigate()
+
   return (
     <div
       className={cn("flex flex-wrap items-center justify-center gap-4", className)}
       role="navigation"
       aria-label="Page not found navigation"
     >
+      <Button
+        type="button"
+        variant="ghost"
+        size="lg"
+        className="rounded-lg gap-2 text-muted-foreground hover:text-foreground"
+        onClick={() => navigate(-1)}
+        aria-label="Go back to previous page"
+      >
+        <ArrowLeft className="h-5 w-5" aria-hidden />
+        Back
+      </Button>
       <Link to="/dashboard">
         <Button
           size="lg"

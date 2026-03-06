@@ -8,6 +8,19 @@ export interface IPIWeights {
   risk: number
 }
 
+/** Spec-aligned IPI record for Company View / API responses */
+export interface IPIRecord {
+  id: string
+  companyId: string
+  windowStart: string
+  windowEnd: string
+  score: number
+  direction: "up" | "down" | "flat"
+  topNarratives: Array<{ narrativeId: string; scoreImpact: number; summary: string }>
+  credibilityProxy: number
+  riskProxy: number
+}
+
 export interface IPIScore {
   company_id: string
   score: number

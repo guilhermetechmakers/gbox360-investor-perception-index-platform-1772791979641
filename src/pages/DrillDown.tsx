@@ -12,7 +12,7 @@ import {
 import { useEvents } from "@/hooks/useEvents"
 import { useCompany as useCompanyDetail } from "@/hooks/useCompanies"
 import { AnimatedPage } from "@/components/AnimatedPage"
-import { SandboxModal } from "@/components/ipi"
+import { SandboxModal, ExperimentPanel } from "@/components/ipi"
 import { NarrativeCard, DecayGauge, NarrativeEventCard, ReplayPanel, NarrativeFilters } from "@/components/narrative"
 import { windowToDateRange } from "@/lib/date-utils"
 import {
@@ -37,7 +37,7 @@ export default function DrillDown() {
   const [platformFilter, setPlatformFilter] = useState<string>("")
   const id = companyId ?? ""
   const windowParam = searchParams.get("window") ?? "1W"
-  const validWindow = ["1D", "1W", "2W", "1M"].includes(windowParam) ? windowParam : "1W"
+  const validWindow = ["1D", "1W", "2W", "30d", "90d", "1M"].includes(windowParam) ? windowParam : "1W"
 
   const { start, end } = useMemo(() => windowToDateRange(validWindow), [validWindow])
   const startIso = `${start}T00:00:00.000Z`
@@ -160,6 +160,12 @@ export default function DrillDown() {
             )}
           </CardContent>
         </Card>
+
+        <ExperimentPanel
+          companyId={id}
+          windowStart={startIso}
+          windowEnd={endIso}
+        />
 
         {/* Narrative decay-weighted scores */}
         {narrativesDecay.length > 0 && (

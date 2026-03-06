@@ -44,4 +44,44 @@ export const companiesApi = {
       ).slice(0, limit)
     }
   },
+  /** GET /api/search/companies — spec-aligned search with pagination. Returns { data, count }. */
+  searchCompanies: async (params: {
+    query?: string
+    page?: number
+    limit?: number
+    filters?: string
+  }): Promise<{ data: Company[]; count: number }> => {
+    try {
+      const search = new URLSearchParams()
+      if (params.query != null && params.query.trim() !== "")
+        search.set("query", params.query.trim())
+      if (params.page != null) search.set("page", String(params.page))
+      if (params.limit != null) search.set("limit", String(params.limit))
+      if (params.filters != null && params.filters !== "")
+        search.set("filters", params.filters)
+      const res = await api.get<{ data?: Company[]; count?: number }>(
+        `/search/companies?${search.toString()}`
+      )
+      const data = Array.isArray(res?.data) ? res.data : []
+      const count = typeof res?.count === "number" ? res.count : data.length
+      return { data, count }
+    } catch {
+      const q = (params.query ?? "").toLowerCase().trim()
+      const list =
+        q.length >= 2
+          ? MOCK_COMPANIES.filter(
+              (c) =>
+                c.name.toLowerCase().includes(q) ||
+                (c.ticker ?? "").toLowerCase().includes(q)
+            )
+          : [...MOCK_COMPANIES]
+      const limit = params.limit ?? 10
+      const page = Math.max(0, (params.page ?? 1) - 1)
+      const start = page * limit
+      return {
+        data: list.slice(start, start + limit),
+        count: list.length,
+      }
+    }
+  },
 }

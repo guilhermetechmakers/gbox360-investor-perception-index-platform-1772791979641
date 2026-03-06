@@ -18,7 +18,7 @@ import {
 import { cn } from "@/lib/utils"
 import { useSignOut } from "@/hooks/useAuth"
 import { useCurrentUser } from "@/hooks/useAuth"
-import { QuickCompanySelector } from "@/components/dashboard"
+import { QuickCompanySelector, CompactFilterBar } from "@/components/dashboard"
 
 const navItems = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -184,8 +184,11 @@ export function DashboardLayout() {
 
       <main className="flex-1 pt-14 md:pt-0 md:pl-0">
         {isDashboardRoute && (
-          <div className="sticky top-14 z-20 flex h-14 items-center justify-between gap-4 border-b border-border bg-card px-4 md:top-0 md:px-6">
-            <QuickCompanySelector placeholder="Search companies..." className="max-w-[280px]" />
+          <div className="sticky top-14 z-20 flex flex-wrap items-center justify-between gap-4 border-b border-border bg-card px-4 md:top-0 md:px-6">
+            <div className="flex flex-1 flex-wrap items-center gap-4">
+              <QuickCompanySelector placeholder="Search companies..." className="max-w-[280px]" />
+              <CompactFilterBar />
+            </div>
             <div className="flex items-center gap-2">
               <Link to="/dashboard/profile">
                 <Avatar className="h-8 w-8 transition-transform hover:scale-105">

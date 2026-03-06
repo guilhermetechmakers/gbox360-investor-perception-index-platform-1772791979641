@@ -11,6 +11,8 @@ export const TIME_WINDOW_OPTIONS = [
   { value: "1D", label: "1 Day" },
   { value: "1W", label: "1 Week" },
   { value: "2W", label: "2 Weeks" },
+  { value: "30d", label: "30 Days" },
+  { value: "90d", label: "90 Days" },
   { value: "1M", label: "1 Month" },
 ] as const
 

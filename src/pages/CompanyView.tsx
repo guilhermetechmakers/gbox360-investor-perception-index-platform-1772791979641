@@ -30,7 +30,7 @@ export default function CompanyView() {
   const modals = useModals()
   const id = companyId ?? ""
   const windowParam = searchParams.get("window") ?? "1W"
-  const validWindow = ["1D", "1W", "2W", "1M"].includes(windowParam) ? windowParam : "1W"
+  const validWindow = ["1D", "1W", "2W", "30d", "90d", "1M"].includes(windowParam) ? windowParam : "1W"
 
   const { start: defaultStart, end: defaultEnd } = useMemo(
     () => windowToDateRange(validWindow),

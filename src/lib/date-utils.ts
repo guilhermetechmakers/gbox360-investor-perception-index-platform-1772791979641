@@ -10,6 +10,12 @@ export function windowToDateRange(window: string): { start: string; end: string 
     case "2W":
       start = subWeeks(end, 2)
       break
+    case "30d":
+      start = subDays(end, 30)
+      break
+    case "90d":
+      start = subDays(end, 90)
+      break
     case "1M":
       start = subMonths(end, 1)
       break
