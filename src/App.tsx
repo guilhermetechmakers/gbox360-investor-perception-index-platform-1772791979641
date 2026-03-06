@@ -25,6 +25,7 @@ import TransactionHistory from "@/pages/TransactionHistory"
 import AdminDashboard from "@/pages/AdminDashboard"
 import AdminAuditLogs from "@/pages/AdminAuditLogs"
 import AdminDataReplay from "@/pages/AdminDataReplay"
+import AdminDrilldown from "@/pages/AdminDrilldown"
 import AdminUserManagement from "@/pages/AdminUserManagement"
 import NotFound from "@/pages/NotFound"
 import ServerError500 from "@/pages/ServerError500"
@@ -82,6 +83,7 @@ function App() {
           <Route path="/admin" element={<AdminLayout />}>
             <Route path="audit-logs" element={<AdminAuditLogs />} />
             <Route path="data-replay" element={<AdminDataReplay />} />
+            <Route path="drilldown/:eventId" element={<AdminDrilldown />} />
             <Route path="user-management" element={<AdminUserManagement />} />
           </Route>
           <Route path="/404" element={<NotFound />} />

@@ -14,16 +14,19 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { AnimatedPage } from "@/components/AnimatedPage"
-import { FileText, ChevronLeft, ChevronRight, ExternalLink } from "lucide-react"
+import { FileText, ChevronLeft, ChevronRight, ExternalLink, Archive } from "lucide-react"
 import { useAdminAuditLogs, useAdminAuditLogPayload, useAdminTenants, useAdminAuditLogExport, useAdminDashboardHealth } from "@/hooks/useAdmin"
+import { useArchiveAuditLogs } from "@/hooks/useArchive"
 import { safeArray } from "@/lib/data-guard"
 import { format } from "date-fns"
 import { subDays } from "date-fns"
+import { Link } from "react-router-dom"
 import { HealthRibbon } from "@/components/admin/HealthRibbon"
 import { PayloadViewerModal } from "@/components/admin/PayloadViewerModal"
 import { CSVExportButton, type ExportStatus } from "@/components/admin/CSVExportButton"
 import { DataAccessGuard } from "@/components/admin/DataAccessGuard"
 import type { AuditLog, AuditLogEventType } from "@/types/admin"
+import type { ArchiveIndexEntry } from "@/types/archive"
 import { cn } from "@/lib/utils"
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100]
@@ -54,6 +57,10 @@ export default function AdminAuditLogs() {
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
   const [payloadId, setPayloadId] = useState<string | null>(null)
+  const [archivePage, setArchivePage] = useState(1)
+  const [archivePageSize] = useState(25)
+  const [archiveEventIdFilter, setArchiveEventIdFilter] = useState("")
+  const [archiveSourceFilter, setArchiveSourceFilter] = useState("")
 
   const params = useMemo(
     () => ({
@@ -75,6 +82,21 @@ export default function AdminAuditLogs() {
   const { data: payload, isLoading: payloadLoading } = useAdminAuditLogPayload(payloadId)
   const { data: healthData } = useAdminDashboardHealth()
   const exportMutation = useAdminAuditLogExport()
+  const archiveParams = useMemo(
+    () => ({
+      eventId: archiveEventIdFilter.trim() || undefined,
+      source: archiveSourceFilter.trim() || undefined,
+      start: start || undefined,
+      end: end || undefined,
+      page: archivePage,
+      pageSize: archivePageSize,
+    }),
+    [archiveEventIdFilter, archiveSourceFilter, start, end, archivePage, archivePageSize]
+  )
+  const { data: archiveRes, isLoading: archiveLoading } = useArchiveAuditLogs(archiveParams)
+  const archiveItems = Array.isArray(archiveRes?.items) ? archiveRes.items : (archiveRes?.data ?? [])
+  const archiveCount = archiveRes?.count ?? 0
+  const archiveTotalPages = Math.max(1, Math.ceil(archiveCount / archivePageSize))
 
   const tenantsList = safeArray(tenants)
   const logs: AuditLog[] = Array.isArray(auditRes?.data) ? auditRes.data : (auditRes?.items ?? [])
@@ -376,6 +398,117 @@ export default function AdminAuditLogs() {
             )}
           </CardContent>
         </Card>
+
+        {/* Archival index: event_id -> s3_key with provenance, checksum */}
+        <Card className="card-elevated rounded-[1.25rem] border border-border bg-card shadow-card">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 font-display">
+              <Archive className="h-5 w-5 text-primary" />
+              Archival index
+            </CardTitle>
+            <CardDescription>
+              Archived payloads with event_id, s3_key, checksum, and archive timestamp. Click event ID to drill down.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="mb-4 flex flex-wrap gap-4">
+              <Input
+                placeholder="Filter by event ID"
+                value={archiveEventIdFilter}
+                onChange={(e) => { setArchiveEventIdFilter(e.target.value); setArchivePage(1); }}
+                className="max-w-xs"
+              />
+              <Input
+                placeholder="Filter by source"
+                value={archiveSourceFilter}
+                onChange={(e) => { setArchiveSourceFilter(e.target.value); setArchivePage(1); }}
+                className="max-w-xs"
+              />
+            </div>
+            {archiveLoading ? (
+              <div className="space-y-2">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <Skeleton key={i} className="h-10 w-full" />
+                ))}
+              </div>
+            ) : archiveItems.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-border py-8 text-center text-muted-foreground">
+                No archival index entries. Archive payloads to see entries here.
+              </div>
+            ) : (
+              <>
+                <ScrollArea className="w-full">
+                  <div className="min-w-[700px]">
+                    <table className="w-full border-collapse text-sm" role="table" aria-label="Archival index">
+                      <thead>
+                        <tr className="sticky top-0 z-10 border-b border-border bg-muted/30">
+                          <th className="p-3 text-left font-medium" scope="col">Event ID</th>
+                          <th className="p-3 text-left font-medium" scope="col">S3 key</th>
+                          <th className="p-3 text-left font-medium" scope="col">Archive timestamp</th>
+                          <th className="p-3 text-left font-medium" scope="col">Checksum</th>
+                          <th className="p-3 text-left font-medium" scope="col">Tenant</th>
+                          <th className="p-3 text-left font-medium" scope="col">Source</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {archiveItems.map((row: ArchiveIndexEntry) => (
+                          <tr key={row.event_id} className="border-b border-border hover:bg-muted/30">
+                            <td className="p-3 font-mono text-xs" role="cell">
+                              <Link
+                                to={`/admin/drilldown/${row.event_id}`}
+                                className="text-primary hover:underline"
+                              >
+                                {row.event_id}
+                              </Link>
+                            </td>
+                            <td className="max-w-[200px] truncate p-3 font-mono text-xs" title={row.s3_key}>
+                              {row.s3_key}
+                            </td>
+                            <td className="p-3 text-muted-foreground">
+                              {row.archive_timestamp ? format(new Date(row.archive_timestamp), "PPp") : "—"}
+                            </td>
+                            <td className="max-w-[120px] truncate p-3 font-mono text-xs" title={row.checksum}>
+                              {row.checksum}
+                            </td>
+                            <td className="p-3">{row.tenant_id}</td>
+                            <td className="p-3">{row.source}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </ScrollArea>
+                {archiveTotalPages > 1 && (
+                  <div className="mt-4 flex flex-wrap items-center justify-between gap-4 border-t border-border pt-4">
+                    <p className="text-sm text-muted-foreground">
+                      Page {archivePage} of {archiveTotalPages} · {archiveCount} total
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setArchivePage((p) => Math.max(1, p - 1))}
+                        disabled={archivePage <= 1}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                        Previous
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setArchivePage((p) => Math.min(archiveTotalPages, p + 1))}
+                        disabled={archivePage >= archiveTotalPages}
+                      >
+                        Next
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       <PayloadViewerModal
@@ -422,7 +555,15 @@ function AuditLogRow({ log, onViewPayload }: AuditLogRowProps) {
       </td>
       <td className="p-3" role="cell">{actor}</td>
       <td className="p-3" role="cell">{tenant}</td>
-      <td className="p-3 font-mono text-xs" role="cell">{eventId}</td>
+      <td className="p-3 font-mono text-xs" role="cell">
+        {eventId && eventId !== "—" ? (
+          <Link to={`/admin/drilldown/${eventId}`} className="text-primary hover:underline">
+            {eventId}
+          </Link>
+        ) : (
+          eventId
+        )}
+      </td>
       <td className="p-3 font-mono text-xs" role="cell">{payloadId}</td>
       <td className="max-w-[200px] p-3" role="cell">
         <span title={descTruncated ? String(description) : undefined}>

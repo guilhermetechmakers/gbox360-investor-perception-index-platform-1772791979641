@@ -1,6 +1,9 @@
 import { useState, useCallback, useEffect } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useSearchParams } from "react-router-dom"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { AnimatedPage } from "@/components/AnimatedPage"
 import { DataAccessGuard } from "@/components/admin/DataAccessGuard"
 import {
@@ -26,10 +29,11 @@ import {
   useAdminDataReplayJobProgress,
   useAdminDataReplayAuditLogs,
 } from "@/hooks/useAdmin"
+import { useReplayByEvent, useReplayJobStatus } from "@/hooks/useArchive"
 import type { PreflightResult, DryRunResult, ReplayJob } from "@/types/admin"
 import { safeArray } from "@/lib/data-guard"
 import { format, subDays } from "date-fns"
-import { RotateCcw } from "lucide-react"
+import { RotateCcw, Hash, AlertTriangle } from "lucide-react"
 import { toast } from "sonner"
 
 function getDefaultTimeWindow(): TimeWindow {
@@ -43,12 +47,21 @@ function getDefaultTimeWindow(): TimeWindow {
 
 export default function AdminDataReplay() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const defaultWindow = getDefaultTimeWindow()
   const [tenantId, setTenantId] = useState<string>("")
   const [timeWindow, setTimeWindow] = useState<TimeWindow>(defaultWindow)
   const [dryRunResult, setDryRunResult] = useState<PreflightResult | DryRunResult | null>(null)
   const [activeJobId, setActiveJobId] = useState<string | null>(null)
   const [isPaused, setIsPaused] = useState(false)
+  const [eventIdInput, setEventIdInput] = useState<string>(() => searchParams.get("eventId") ?? "")
+  const [eventReplayResult, setEventReplayResult] = useState<{
+    predictedEffects?: string
+    potentialSideEffects?: string
+    message?: string
+    jobId?: string
+  } | null>(null)
+  const [eventReplayJobId, setEventReplayJobId] = useState<string | null>(null)
 
   const { data: tenants = [] } = useAdminTenants()
   const tenantsList = safeArray(tenants)
@@ -64,6 +77,8 @@ export default function AdminDataReplay() {
   const { data: auditPreview = [] } = useAdminDataReplayAuditLogs({
     tenantId: tenantId || undefined,
   })
+  const replayByEventMutation = useReplayByEvent()
+  const { data: eventReplayJob } = useReplayJobStatus(eventReplayJobId)
 
   useEffect(() => {
     if (!tenantId || !timeWindow.start || !timeWindow.end) return
@@ -137,6 +152,13 @@ export default function AdminDataReplay() {
     }
   }, [progressData])
 
+  useEffect(() => {
+    const status = (eventReplayJob as { status?: string })?.status
+    if (status === "COMPLETED" || status === "FAILED") {
+      setEventReplayJobId(null)
+    }
+  }, [eventReplayJob])
+
   const handlePause = useCallback(() => {
     setIsPaused(true)
     toast.info("Pause requested. Backend support for pause/resume can be added when available.")
@@ -163,6 +185,42 @@ export default function AdminDataReplay() {
     },
     [navigate]
   )
+
+  const runEventDryRun = useCallback(() => {
+    const eid = eventIdInput.trim()
+    if (!eid) return
+    replayByEventMutation.mutate(
+      { eventId: eid, mode: "DRY_RUN" },
+      {
+        onSuccess: (data) => {
+          setEventReplayResult({
+            predictedEffects: data?.predictedEffects,
+            potentialSideEffects: data?.potentialSideEffects,
+            message: data?.message,
+          })
+        },
+      }
+    )
+  }, [eventIdInput, replayByEventMutation])
+
+  const runEventExecute = useCallback(() => {
+    const eid = eventIdInput.trim()
+    if (!eid) return
+    replayByEventMutation.mutate(
+      { eventId: eid, mode: "EXECUTE" },
+      {
+        onSuccess: (data) => {
+          setEventReplayResult({
+            message: data?.message,
+            jobId: data?.jobId,
+          })
+          if (data?.jobId && (data as { status?: string })?.status !== "COMPLETED") {
+            setEventReplayJobId(data.jobId)
+          }
+        },
+      }
+    )
+  }, [eventIdInput, replayByEventMutation])
 
   const progressPercent = (progressData as { progressPercent?: number })?.progressPercent ?? 0
   const progressStatus = (progressData as { status?: string })?.status ?? "idle"
@@ -209,6 +267,75 @@ export default function AdminDataReplay() {
                 value={timeWindow}
                 onChange={setTimeWindow}
               />
+            </CardContent>
+          </Card>
+
+          {/* Single event replay */}
+          <Card className="card-elevated rounded-[1rem] border border-border bg-card shadow-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 font-display">
+                <Hash className="h-5 w-5 text-primary" aria-hidden />
+                Single event replay
+              </CardTitle>
+              <CardDescription>
+                Replay one event by ID. Dry-run to see predicted effects; Execute to enqueue and run.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="event-id-replay">Event ID</Label>
+                <Input
+                  id="event-id-replay"
+                  placeholder="e.g. UUID of narrative event"
+                  value={eventIdInput}
+                  onChange={(e) => setEventIdInput(e.target.value)}
+                  className="font-mono"
+                />
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <Button
+                  variant="outline"
+                  onClick={runEventDryRun}
+                  disabled={!eventIdInput.trim() || replayByEventMutation.isPending}
+                  className="gap-2"
+                >
+                  Dry-run
+                </Button>
+                <Button
+                  onClick={runEventExecute}
+                  disabled={!eventIdInput.trim() || replayByEventMutation.isPending}
+                  className="gap-2 bg-primary text-primary-foreground"
+                >
+                  Execute
+                </Button>
+              </div>
+              {eventReplayResult && (
+                <div className="rounded-lg border border-border bg-muted/20 p-4 space-y-2">
+                  {eventReplayResult.predictedEffects && (
+                    <p className="text-sm">
+                      <span className="font-medium text-muted-foreground">Predicted effects: </span>
+                      {eventReplayResult.predictedEffects}
+                    </p>
+                  )}
+                  {eventReplayResult.potentialSideEffects && (
+                    <p className="text-sm flex items-start gap-2">
+                      <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                      <span>
+                        <span className="font-medium text-muted-foreground">Potential side effects: </span>
+                        {eventReplayResult.potentialSideEffects}
+                      </span>
+                    </p>
+                  )}
+                  {eventReplayResult.message && !eventReplayResult.predictedEffects && (
+                    <p className="text-sm text-muted-foreground">{eventReplayResult.message}</p>
+                  )}
+                  {eventReplayJobId && eventReplayJob && (
+                    <p className="text-xs text-muted-foreground">
+                      Job status: {(eventReplayJob as { status?: string })?.status ?? "—"}
+                    </p>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
 
