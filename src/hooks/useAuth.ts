@@ -78,9 +78,28 @@ export function useResetPassword() {
 
 export function useResendVerification() {
   return useMutation({
-    mutationFn: authApi.resendVerification,
-    onSuccess: () => toast.success("Verification email sent"),
+    mutationFn: (payload?: { userId?: string; email?: string }) => authApi.resendVerification(payload),
+    onSuccess: (data) => {
+      const msg = data?.message ?? "Verification email sent"
+      if (data?.success !== false) {
+        toast.success(data?.cooldown ? `${msg} You can resend again in ${data.cooldown}s.` : msg)
+      } else {
+        toast.info(msg)
+      }
+    },
     onError: (error: Error) => toast.error(error.message ?? "Failed to resend"),
+  })
+}
+
+export function useVerificationStatus(userId?: string, options?: { enabled?: boolean; refetchInterval?: number }) {
+  const enabled = options?.enabled ?? true
+  const interval = options?.refetchInterval ?? 15000
+  return useQuery({
+    queryKey: [...authKeys.me, "verification-status", userId ?? "me"] as const,
+    queryFn: () => authApi.getVerificationStatus(userId),
+    enabled,
+    refetchInterval: interval,
+    staleTime: 5000,
   })
 }
 

@@ -42,3 +42,18 @@ export interface CurrentUser {
   full_name?: string
   role?: string
 }
+
+/** Verification status from polling API */
+export type VerificationStatusValue = "pending" | "verified" | "failed"
+
+export interface VerificationStatusResponse {
+  status: VerificationStatusValue
+  lastUpdated?: string
+  updatedAt?: string
+}
+
+export interface ResendVerificationResponse {
+  success: boolean
+  message?: string
+  cooldown?: number
+}

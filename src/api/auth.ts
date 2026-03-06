@@ -1,5 +1,12 @@
 import { api } from "@/lib/api"
-import type { AuthResponse, SignInInput, SignUpInput, MFAVerifyInput } from "@/types/auth"
+import type {
+  AuthResponse,
+  SignInInput,
+  SignUpInput,
+  MFAVerifyInput,
+  VerificationStatusResponse,
+  ResendVerificationResponse,
+} from "@/types/auth"
 
 function normalizeSignUpPayload(credentials: SignUpInput): Record<string, unknown> {
   return {
@@ -42,8 +49,24 @@ export const authApi = {
   verifyEmail: async (token: string): Promise<{ verified: boolean }> =>
     api.get<{ verified: boolean }>(`/auth/verify-email?token=${encodeURIComponent(token)}`),
 
-  resendVerification: async (): Promise<void> =>
-    api.post("/auth/resend-verification", {}),
+  getVerificationStatus: async (userId?: string): Promise<VerificationStatusResponse> => {
+    const params = userId ? `?userId=${encodeURIComponent(userId)}` : ""
+    const data = await api.get<VerificationStatusResponse>(`/auth/verification-status${params}`)
+    return {
+      status: data?.status ?? "pending",
+      updatedAt: data?.updatedAt,
+    }
+  },
+
+  resendVerification: async (payload?: { userId?: string; email?: string }): Promise<ResendVerificationResponse> => {
+    const body = payload ?? {}
+    const data = await api.post<ResendVerificationResponse>("/auth/resend-verification", body)
+    return {
+      success: data?.success ?? true,
+      message: data?.message,
+      cooldown: data?.cooldown,
+    }
+  },
 
   verifyMfa: async (input: MFAVerifyInput): Promise<AuthResponse> => {
     const data = await api.post<AuthResponse>("/auth/verify-mfa", input)

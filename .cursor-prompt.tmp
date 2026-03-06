@@ -1347,415 +1347,222 @@ When implementing this project:
 ---
 
 **Remember: Always reference this file for design decisions. Do not use generic or placeholder designs.**
- for bestpractices and # Order / Transaction History
-
-This development prompt provides a complete, actionable spec for building the Order / Transaction History page along with integrated Billing & Subscription Management and Subscription Management components. The design system, runtime safety rules, and project context are incorporated to ensure a production-ready implementation with robust null-safety, proper data handling, and a premium fintech UI.
-
----
-
-## Order / Transaction History
+ for bestpractices and # Email Verification
 
 ## Overview
-Build an Order / Transaction History page that presents a list of past invoices and transactions, with capabilities to download invoices as PDF/CSV, view invoice details, and clearly display payment status. This page ties directly into Billing & Subscription Management (for invoices, plan entitlements, and billing metadata) and into the Subscription Management area (for plan changes and related entitlements). The UI should be data-forward, accessible, and performant, with clear affordances for exporting data, viewing details, and understanding payment status.
-
----
+Create an intermediate, user-facing Email Verification page that informs the user to verify their email via a tokenized link, provides the option to re-send the verification email, and displays the current verification status. This page must integrate cleanly with the project’s authentication system (signup, login, session management, password reset, email verification, and optional SAML/OAuth SSO) and fit within the unified Login/Signup flow and the Dashboard experience. The implementation must be robust against null/undefined values, guard all array operations, and adhere to the runtime safety rules outlined in the project context.
 
 ## Page Description (Full Detail)
 What this page is:
-- A dedicated historical ledger UI for invoices and transactions. It shows a paginated or virtualized list of past invoices/transactions, including metadata such as date, description, amount, currency, plan or product, status, and payment method when applicable.
+- An intermediate-state screen shown after signup or when a user needs to verify their email. It informs the user that a verification email has been sent with a tokenized link and instructs them to check their inbox (and spam) to complete verification.
 
 Goals:
-- Provide fast, predictable rendering of historical data, with robust client-side guards against null/undefined values.
-- Enable users to download individual invoices as PDF or CSV, and to export the current view (CSV/PDF or both) for multiple records.
-- Allow quick invoice viewing in a modal or drawer, including billing address, line items, taxes, totals, and payment status.
-- Integrate with Billing & Subscription Management to surface and filter by subscription plan, entitlements, and billing metadata.
-- Clearly indicate payment status (Paid, Unpaid, Past Due, Refunded, Canceled) with accessible color semantics.
-- Provide date-range filtering, search, and quick-apply presets (Last 7/30/90 days).
-- Ensure all data access follows the provided runtime safety rules (nullish coalescing, Array guards, useState defaults, etc.).
+- Clearly convey that verification is required to activate the account.
+- Provide a prominent option to re-send the verification email, with rate-limit indicators and feedback.
+- Show real-time or near-real-time verification status (e.g., polling or push-based update) to guide the user to onboarding or the Dashboard upon success.
+- Offer supportive guidance if verification fails (e.g., contact support, retry steps).
+- Align with the project’s enterprise-ready aesthetic and design language, ensuring accessibility and responsive behavior.
 
-Connected features and API interactions:
-- Billing & Subscription Management: Invoices, subscriptions, plan changes, and billing metadata are related data points. Invoice items, totals, tax, and billing address should be retrieved or joined if needed.
-- Subscription Management: Plan names, entitlements, and billing metadata should be surfaced in the list where relevant (e.g., plan name per invoice).
-- No external UI data visualizations are required, but the page should gracefully handle optional data (e.g., missing billing address, missing line items).
+UI elements and how they need to look:
+- A centered hero area with a warm, premium look and a clear headline: “Verify your email to activate your account.”
+- Subheading with concise guidance: “A verification link has been sent to you. Please click the link to verify. You can re-send the email if you didn’t receive it.”
+- Re-send verification button (primary action) with clear disabled/loading states when rate-limited or in progress.
+- Verification status indicator/status chip (e.g., Pending, Verified) with color coding.
+- Live status update: small notification area or status badge that updates as verification completes (via polling or WebSocket-like mechanism).
+- Support contact link (e.g., “Need help? Contact support”).
+- Visual guidance and hierarchy following the project’s typography and color system (primary green for CTAs, neutrals for text, subtle shadows on cards).
+- Optional: a small “Why am I seeing this?” info link or inline explanation.
 
-UI elements and visual guidance (aligned with design system):
-- A prominent header section with a large, editorial hero feel (serif display font for headings, sans-serif body) and ample white space.
-- A filter bar containing:
-  - Date range picker (from-to)
-  - Text search field (invoice number, description, or plan)
-  - Quick filter chips (All, Paid, Unpaid, Past Due, Refunded)
-  - Export button (CSV/PDF) and per-record download actions
-- A data table or card-grid of invoices/transactions with columns:
-  - Date (formatted, sortable)
-  - Invoice/Transaction ID
-  - Description (e.g., "Subscription renewal", "One-time charge")
-  - Plan/Product (if applicable)
-  - Amount (currency-aware formatting)
-  - Status (Paid, Unpaid, Past Due, Refunded, Canceled)
-  - Download (PDF/CSV)
-- Invoice detail modal/drawer:
-  - Billing address, company name, contact, tax IDs if applicable
-  - Line items (description, quantity, unit price, amount)
-  - Subtotals, taxes, discounts, total
-  - Payment method and last payment date
-  - View raw payload / audit trail toggle if needed
-- Pagination controls or infinite scrolling (prefer pagination for predictability)
-- Subtle, accessible hover/focus states and keyboard support
+Visual guidance:
+- Follow the provided visual style and color palette (greens, teals, neutrals) with a premium fintech look. Use serif display font for headings and sans-serif for body, maintain generous padding, rounded surfaces, and soft shadows.
 
-Mandatory coding standards — runtime safety (non-negotiable):
-- Supabase / API results: Always guard against null results
-  - Example: const invoices = data ?? []
-- Array operations: Guard against non-arrays or null/undefined
-  - (invoices ?? []).map(...), or Array.isArray(invoices) ? invoices.map(...) : []
-- useState defaults for arrays: initialize with proper type
-  - const [invoices, setInvoices] = useState<Invoice[]>([])
-- API response shapes: validate before usage
-  - const list = Array.isArray(response?.data) ? response.data : []
-- Optional chaining and defaults:
-  - const firstInvoice = invoices?.[0]
-  - const { items = [], count = 0 } = response ?? {}
-- Destructuring with defaults wherever API responses are consumed
-  - const { data: invoiceList = [] } = apiResponse ?? {}
+API integrations:
+- No external APIs are described for this page in the immediate context, but this page should be ready to work with the existing authentication API (e.g., endpoint to re-send verification email, endpoint to check verification status). Ensure the page handles API responses safely, with fallbacks to empty arrays/objects when needed.
 
----
+Integrated pages and flows (for context):
+- Connected to: Login / Signup page (unified authentication entry) and the Dashboard (post-verification entry point).
+- Part of the same authentication and account-management system with support for SSO (SAML/OAuth placeholder) and MFA prompts after login if enabled.
 
 ## Components to Build
-
-1) TransactionHistoryPage
-- Purpose: Orchestrates data fetching, filtering, and rendering of the list and detail modal.
-- Props: None (page-level)
-- State:
-  - invoices: Invoice[]
-  - isLoading: boolean
-  - error: string | null
-  - filter: { query: string; startDate: string | null; endDate: string | null; status: string[] }
-  - pagination: { page: number; pageSize: number; total: number }
-  - selectedInvoice: Invoice | null
-  - showDetailModal: boolean
-- Behavior:
-  - Fetch invoices with applied filters and pagination
-  - Guard all results using data ?? [] and Array.isArray checks
-  - Open detail modal on row action
-  - Trigger export of current view (CSV/PDF)
-
-2) InvoiceListTable
-- Purpose: Render a performant, accessible table of invoices
-- Props:
-  - invoices: Invoice[]
-  - onView(invoice): void
-  - onDownload(invoice, type): void
-- UI:
-  - Table with accessible header (th) and ARIA roles
-  - Sortable Date column (client-side if server-side sort not available)
-  - Row actions for PDF/CSV download
-- Accessibility:
-  - Keyboard navigable
-  - Proper aria-labels and descriptive titles
-
-3) InvoiceDetailModal
-- Purpose: Display detailed invoice information
-- Props:
-  - invoice: Invoice
-  - onClose(): void
-- UI:
-  - Billing address, company, items, taxes, totals
-  - Copyable fields where appropriate
-  - Close on Escape
-- Data handling:
-  - Safely render line items and totals with guards (e.g., (invoice.items ?? []).map(...))
-
-4) ExportBar
-- Purpose: Provide export options for current view
-- Props:
-  - invoices: Invoice[]
-  - onExport(format): void
-- UI:
-  - Dropdown or segmented control for PDF/CSV
-  - Accessible label and tooltip
-
-5) FiltersBar
-- Purpose: Date range, search, status chips
-- Props:
-  - filter: FilterState
-  - onFilterChange(nextFilter): void
-- UI:
-  - Date range pickers (start, end)
-  - Search input
-  - Status chips with inclusive multi-select
-
-6) BillingMetadataPanel (optional, in invoice detail or side panel)
-- Purpose: Show added billing metadata on a per-invoice basis
-- Props:
-  - invoice: Invoice
-
-7) API Helpers / Services
-- invoiceService.ts
-  - fetchInvoices(params): Promise<{ data: Invoice[]; total: number } | null>
-  - downloadInvoice(invoiceId, format): Promise<Blob>
-- billingService.ts
-  - fetchBillingMetadata(invoiceId): Promise<BillingMetadata | null>
-
-8) Data Models (TypeScript interfaces)
-- Invoice
-  - id: string
-  - date: string (ISO)
-  - description: string
-  - planName?: string
-  - amount: number
-  - currency: string
-  - status: 'paid' | 'unpaid' | 'past_due' | 'refunded' | 'canceled'
-  - pdfUrl?: string
-  - csvUrl?: string
-  - items?: InvoiceItem[]
-  - billingAddress?: Address
-  - paymentMethod?: string
-  - metadata?: any
-- InvoiceItem
-  - id: string
-  - description: string
-  - quantity: number
-  - unitPrice: number
-  - amount: number
-- Address
-  - line1: string
-  - line2?: string
-  - city?: string
-  - state?: string
-  - postalCode?: string
-  - country?: string
-- BillingMetadata
-  - billingAccountId?: string
-  - customerId?: string
-  - entitlements?: string[]
-- FilterState
-  - query: string
-  - startDate: string | null
-  - endDate: string | null
-  - status: string[]
-
----
+- EmailVerificationPage
+  - Props: userId, email, verificationStatus, canResend (rate-limiting state), onResend, onStatusCheck
+  - State: status (string: "pending" | "verified" | "failed"), loading (boolean), lastResendAt (timestamp)
+  - UI Elements:
+    - Header with title and subtle subtitle
+    - Status badge: Pending/Verified/Failed with color cues
+    - Re-send Verification Button: disabled when rate-limited or loading; shows spinner during resend
+    - Status Feed: small, non-intrusive area that updates as verification completes
+    - Support Link: “Need help? Contact support”
+  - Behavior:
+    - On mount, start a light polling mechanism to check verification status (e.g., every 15-30 seconds) using a safe approach (guard against nulls, etc.)
+    - When user clicks Resend, call an API to resend verification email; apply rate-limit UI feedback
+    - If status becomes verified, navigate to onboarding or Dashboard after a short confirmation delay
+- ResendVerificationButton (sub-component)
+  - Handles disabled/loading states and rate-limiting messaging
+- StatusIndicator (sub-component)
+  - Renders status badge with accessible aria-label and color
+- SupportLink
+  - Simple anchor or modal trigger to contact support
 
 ## Implementation Requirements
 
 ### Frontend
-
-- Architecture:
-  - Use a modular component architecture with clear separation of concerns.
-  - Use React with TypeScript (or your preferred TS framework) and a state management approach suitable for the app (e.g., useState/useEffect, context, or lightweight store if present).
-  - Ensure all components are accessible (ARIA roles, keyboard interactions).
-
-- UI Components:
-  - Responsive layout with a centered content column, max width 900–1000px for the hero/content area, and generous padding as per design language.
-  - Cards for individual invoices or a table layout with proper cell padding, readable fonts, and hover/focus states.
-  - Buttons: Primary green (#2f6f63), Secondary teal/gray-teal (#2b6250) with accessible contrast.
-  - Modals/Drawers: Invoice detail modal with focus trap and escape-to-close behavior.
-
-- Data Handling:
-  - All data fetches should safely handle nulls: data ?? [], Array.isArray checks, and defaults for missing fields.
-  - Dates should be displayed in a user-friendly format (e.g., MM/DD/YYYY or locale format) with consistent time zone handling.
-  - Currency formatting must respect the invoice currency (e.g., USD, EUR) using Intl.NumberFormat.
-
-- Interactions:
-  - Date range filters must constrain inputs and debounce rapid changes to reduce re-fetching.
-  - Search must debounce (e.g., 250ms) to avoid excessive requests.
-  - Sorting (if implemented) should be stable and reflect in accessible text for screen readers.
-  - Downloads must initiate a non-blocking fetch and trigger a blob download with correct file naming.
-
-- Backend and API layer (assumed available endpoints; implement stubs where needed):
-  - GET /invoices?startDate=&endDate=&query=&status=&page=&pageSize=
-  - GET /invoices/:id (for detail)
-  - GET /invoices/:id/download?format=pdf|csv
-  - GET /billing/:invoiceId/metadata (optional; surface billing metadata)
-  - Security: Ensure endpoints require proper authentication tokens or session cookies; handle 401/403 gracefully.
-
-- Validation:
-  - Validate responses: const list = Array.isArray(response?.data) ? response.data : []
-  - Ensure numeric amounts are finite: Number.isFinite(amount)
-  - Ensure required fields exist before rendering; gracefully degrade if missing (e.g., show "N/A" for missing plan or address).
-
-- Performance:
-  - Implement pagination or virtualization for large lists.
-  - Use memoization where appropriate (e.g., computed status counts, filtered lists).
+- Pages:
+  - EmailVerificationPage.tsx (React)
+- Components:
+  - EmailVerificationPage, ResendVerificationButton, StatusIndicator
+- State management:
+  - Use React useState and useEffect with correct defaults (e.g., useState<string>("pending"), useState<boolean>(false))
+- Data safety:
+  - Guard all array and object accesses with Array.isArray() and optional chaining where appropriate
+  - Use data ?? [] patterns for any array results
+  - Validate API responses: ensure response?.data is an array before mapping
+- API calls (placeholders to integrate with existing backend):
+  - POST /api/auth/resend-verification with { userId, email } and handle rate-limiting messaging
+  - GET /api/auth/verification-status?userId=... to poll for status
+- Routing:
+  - On successful verification, redirect to the next step (onboarding or dashboard) using a controlled transition
+- Accessibility:
+  - All interactive elements accessible (aria-labels, keyboard navigable)
+  - Color contrast meets WCAG guidelines
+- State defaults:
+  - Ensure default states reflect an initial “pending verification” status
 
 ### Backend
-
-- APIs/Endpoints:
-  - Invoice retrieval with filtering and pagination
-  - Invoice detail retrieval
-  - Invoice download generation (PDF/CSV) with deterministic naming
-  - Optional: billing metadata retrieval
-- Database Tables (schemas; simplified):
-  - invoices
-    - id (PK)
-    - date (timestamp)
-    - description (text)
-    - plan_name (text, nullable)
-    - amount (numeric)
-    - currency (text)
-    - status (text) // paid, unpaid, past_due, refunded, canceled
-    - pdf_url (text, nullable)
-    - csv_url (text, nullable)
-    - billing_address_id (FK)
-    - payment_method (text, nullable)
-  - invoice_items
-    - id (PK)
-    - invoice_id (FK)
-    - description (text)
-    - quantity (int)
-    - unit_price (numeric)
-    - amount (numeric)
-  - addresses
-    - id (PK)
-    - line1, line2, city, state, postalCode, country
-  - billing_metadata
-    - invoice_id (FK)
-    - billing_account_id (text)
-    - customer_id (text)
-    - entitlements (text array)
-
-- Business Logic:
-  - Enforce null-safety at the API level; ensure that missing fields return defaults in the response shape.
-  - Ensure idempotent and retry-safe download endpoints; generate PDFs/CSVs with deterministic naming like invoice_{id}.pdf.
-  - Apply rate-limiting on export endpoints to protect resources.
+- Endpoints to be consumed by frontend:
+  - POST /api/auth/resend-verification
+    - Input: { userId: string, email: string }
+    - Output: { success: boolean, message?: string, cooldown?: number }
+  - GET /api/auth/verification-status?userId=...
+    - Output: { status: "pending" | "verified" | "failed", updatedAt?: string }
+- Database considerations:
+  - Ensure verification records reflect status changes and can be queried idempotently
+  - Protect endpoints with authentication and proper authorization
+- Rate limiting and idempotency:
+  - Resend endpoint should enforce rate limits (per-user, per-email) and respond with clear cooldown information
 
 ### Integration
-
-- Data Flow:
-  - Frontend calls fetchInvoices with filters; backend returns invoices array (and total count) with safe defaults.
-  - User selects an invoice to view; frontend calls fetchInvoiceDetail or fetches embedded detail from the list if included.
-  - User clicks download; frontend calls downloadInvoice with format; response triggers file download via blob link.
-- State Sync:
-  - When a user applies filters, the page resets to page 1 and fetches new data.
-  - When an invoice detail is opened, ensure that related billing metadata is available; if not, fetch additional data.
-
----
+- Data flow:
+  - EmailVerificationPage fetches status via status API and updates UI
+  - Resend action triggers resend API; UI shows loading and potential cooldown
+  - On status === "verified", trigger navigation to onboarding/dashboard
+- Error handling:
+  - Graceful handling of API failures with user-friendly messages
+  - Fallback UI when API returns null or unexpected shapes
+- State synchronization:
+  - Use a single source of truth for verification status in the component; do not rely on stale props
+  - Ensure nullish checks around data from API before applying map/filter/reduce
+- Security:
+  - Ensure endpoints require authentication; avoid leaking verification tokens or sensitive data in the client
 
 ## User Experience Flow
-
-1) User lands on Order / Transaction History page
-- See a hero/header area with a clean, premium fintech aesthetic.
-- A FiltersBar at the top with date range, search, and status chips.
-- A list/table of invoices with columns: Date, ID, Description, Plan, Amount, Currency, Status, Downloads.
-- A prominent Export button in the filter area to export current view (CSV/PDF).
-
-2) User applies date range or search
-- Page shows a loading state (spinning indicator or skeleton rows).
-- Invoices list updates to reflect filters, with correct null-safe rendering and price formatting.
-
-3) User filters by status (Paid, Unpaid, Past Due, Refunded, Canceled)
-- List updates to match selections; counts can be surfaced if needed.
-
-4) User clicks an invoice row or actions
-- InvoiceDetailModal opens, showing full details: billing address, line items, taxes, totals, and payment method.
-- Option to close the modal with Escape or an on-screen close button.
-
-5) User downloads an invoice
-- Click PDF/CSV download for a specific invoice.
-- Browser triggers file download; UI shows a brief success toast or non-blocking confirmation.
-
-6) User uses Export
-- Clicks Export for CSV or PDF; a file downloads for the current view range and filters.
-
-7) Edge cases
-- No invoices found: show empty state with guidance to adjust filters.
-- Partial data: render available fields with fallbacks (e.g., description missing -> "No description").
-
----
+1. User completes signup or needs to verify an email.
+2. User lands on Email Verification page with message: “A verification email has been sent to your address. Please verify to activate your account.”
+3. UI shows:
+   - Verification status: Pending
+   - Re-send button: Primary action (enabled unless rate-limited)
+   - Support link for help
+4. System polls verification status periodically (e.g., every 15 seconds) and updates UI when status changes to Verified.
+5. If verification succeeds, automatically navigate to onboarding or Dashboard after a brief confirmation
+   - Optionally show a toast or inline message: “Email verified. Redirecting…”
+6. If user does not receive email, they tap Re-send; system triggers resend and shows a loading state, then a success message or cooldown notice
+7. If verification never completes or fails, provide support contact and fallback guidance
+8. All UI states respect the design system and are responsive across devices
 
 ## Technical Specifications
-
-- Data Models: (TypeScript interfaces)
-  - Invoice, InvoiceItem, Address, BillingMetadata, FilterState
-- API Endpoints (example):
-  - GET /api/invoices?startDate=&endDate=&query=&status=&page=&pageSize=
-  - GET /api/invoices/{id}
-  - GET /api/invoices/{id}/download?format=pdf|csv
-  - GET /api/invoices/{id}/billing-metadata
+- Data Models:
+  - User: { id: string, email: string, isVerified: boolean, ... }
+  - VerificationStatus: { userId: string, status: "pending" | "verified" | "failed", lastUpdated: string, cooldownUntil?: string }
+- API Endpoints:
+  - POST /api/auth/resend-verification
+    - Body: { userId: string, email: string }
+    - Response: { ok: boolean, cooldown?: number, message?: string }
+  - GET /api/auth/verification-status
+    - Query: userId
+    - Response: { status: "pending" | "verified" | "failed", lastUpdated: string }
 - Security:
-  - JWT/token-based authentication; include Authorization header
-  - Server-side authorization checks for access to invoices
-  - Error handling for 401/403, with user-friendly messages
-- Validation Rules:
-  - Dates are ISO strings; validate format before sending
-  - Ensure numeric fields (amount, unitPrice) are finite numbers
-  - Validate that status is one of allowed values
-- Data Handling Rules (Runtime Safety):
-  - const invoices = data ?? []
-  - const list = Array.isArray(response?.data) ? response.data : []
-  - Initialize arrays with useState<Type[]>([])
-  - Optional chaining for nested fields (invoice?.billingAddress?.city)
-
----
+  - JWT/session-based authentication for endpoints
+  - Role-based access control if applicable (enterprise onboarding vs regular user)
+  - Rate limiting on resend to prevent abuse
+- Validation:
+  - Validate email format where applicable
+  - Ensure userId is present and authenticated
+  - Use optional chaining and default values to guard against null responses
+- State and performance:
+  - Polling interval should be configurable but sensible (e.g., 15-30s)
+  - Debounce or cancel previous polls on unmount
+- Testing:
+  - Unit tests for EmailVerificationPage with mocked API responses (pending, verified, failed)
+  - Integration tests for resend flow and status polling
+  - E2E tests covering successful verification and redirection
 
 ## Acceptance Criteria
-
-- [ ] The page renders a searchable, filterable list of invoices with correct date formatting, amount formatting, and status display.
-- [ ] All data accesses guard against null/undefined: (data ?? []), Array.isArray checks, and proper useState([]) initialization.
-- [ ] Invoice detail modal opens on request and shows complete information (billing address, line items, totals, payment method) with proper guards for missing fields.
-- [ ] PDF/CSV downloads for individual invoices work reliably; downloads trigger with correct file naming and content-type.
-- [ ] Export current view (CSV/PDF) works with applied filters and pagination; backend handles large exports without breaking the UI.
-- [ ] Date range and search filters debounce appropriately; loading states appear during fetches.
-- [ ] Security: API endpoints require authentication; 401/403s are handled gracefully in the UI with prompts to re-authenticate.
-- [ ] UI adheres to the design system and visual style, including typography, color palette, spacing, and responsive behavior.
-
----
+- [ ] Email Verification page renders with correct messaging and a functional Re-send button that respects rate limits and shows loading state
+- [ ] Status polling correctly updates UI from Pending to Verified and redirects to onboarding/dashboard
+- [ ] Resend endpoint responds with cooldown information; UI disables button during cooldown and shows appropriate message
+- [ ] All array/object operations guard against null/undefined values using the enforced runtime safety patterns (data ?? [], Array.isArray(), etc.)
+- [ ] Frontend uses useState([]) for any array state, with proper type annotations and defaults
+- [ ] API responses are validated: responses with data mapped only if Array.isArray(response?.data) else default to []
+- [ ] No crash on null or missing API fields; component remains responsive and accessible
+- [ ] Visuals align with the project’s design system, including typography, color palette, spacing, and card/shadow behavior
+- [ ] Authentication and authorization checks are enforced for API endpoints
 
 ## UI/UX Guidelines
+Apply the project's design system:
+- Maintain consistent header/navigation patterns with white top nav, logo left, centered links, and actions on the right
+- Use the specified color palette for CTAs, accents, and surfaces
+- Implement hero-area emphasis with generous padding and a clean, premium feel
+- Cards should be pure white with 16-20px corner radii and soft shadows; hover/focus interactions should lift the card slightly
+- Interactive elements: rounded primary green buttons, secondary actions with lighter fills or outlines; clear focus rings
+- Ensure responsive behavior with comfortable spacing across devices
 
-Apply the project's design system and visual style:
-- Color Palette:
-  - Primary Green: #2f6f63
-  - Secondary Teal/Gray-Teal: #2b6250
-  - Neutral White: #ffffff
-  - Page Background Taupe: #a79e96
-  - Hero Beige: #f3efe6
-  - Text Dark: #1f1f1f
-  - Body Text Gray: #555555
-  - Card Shadow: rgba(0,0,0,0.08)
-  - Accent Brown: #3b2b1e
-  - Accent Orange: #e07a4c
-- Typography:
-  - Headings: serif display font (Playfair Display or Georgia)
-  - Body: sans-serif (Inter or Roboto)
-- Layout:
-  - Wide hero with centered content; max content width 900–1000px for the hero
-  - Generous left/right padding; rounded card surfaces; soft shadows
-- Key Design Elements:
-  - Cards: 16–20px radius, 0 6px 20px rgba(0,0,0,0.08) shadow, hover lift
-  - Navigation: white top bar, centered links, right-aligned actions; primary action button in green
-  - Interactive Elements: rounded CTAs, forms with light borders, focus rings in green
-- Data Visualization:
-  - Not required; if added, use the same neutral palette with teal/green accents
+## Visual Style
+
+### Color Palette
+- Primary Green: #2f6f63
+- Secondary Teal/Gray-Teal: #2b6250
+- Neutral White: #ffffff
+- Page Background Taupe: #a79e96
+- Hero Beige: #f3efe6
+- Text Dark: #1f1f1f
+- Body Text Gray: #555555
+- Card Shadow: rgba(0,0,0,0.08)
+- Accent Brown (floating card): #3b2b1e
+- Accent Orange (floating card CTA): #e07a4c
+
+### Typography & Layout
+- Heading Typography: serif display font (Playfair Display or Georgia)
+- Body Typography: sans-serif (Inter or Roboto)
+- Hierarchy: large hero heading, medium subheading, small muted body
+- Layout: wide hero, max content width ~900–1000px, 12-column implied grid
+- Spacing: generous vertical rhythm, 24–32px gaps between sections
+
+### Key Design Elements
+- Card Design: white cards, 16–20px radii, subtle shadows, hover lift
+- Navigation: white top bar, logo left, centered links, right-side actions
+- Data Visualization: neutral with teal/green accents, minimalistic
+- Interactive Elements: rounded CTAs, focus rings, clear hover/active states
+
+### Design Philosophy
+- Professional, premium fintech aesthetic; calm, trustworthy color story
+- Clean, data-forward visuals for enterprise users
+- Serif headlines with sans-serif body for contrast
+- Subtle depth via shadows and rounded geometry
+
+## Mandatory Coding Standards — Runtime Safety
+
+CRITICAL: Follow these rules in ALL generated code to prevent runtime crashes.
+
+1. Supabase query results: Always use nullish coalescing — const items = data ?? [].
+2. Array methods: Never call on a value that could be null/undefined/non-array. Guard: (items ?? []).map(...) or Array.isArray(items) ? items.map(...) : [].
+3. React useState for arrays/objects: Initialize with correct type — useState<Type[]>([]).
+4. API response shapes: Validate — const list = Array.isArray(response?.data) ? response.data : [].
+5. Optional chaining: Use obj?.property?.nested when accessing nested API fields.
+6. Destructuring with defaults: const { items = [], count = 0 } = response ?? {}.
 
 ---
 
-## Visual Style (Reinforced)
-
-The Order / Transaction History page should reflect the premium fintech aesthetic described in the project’s Visual Style section. The UI should feel calm, data-forward, and enterprise-ready. Ensure consistent typography, spacing, and color usage across all components.
-
----
-
-## Deliverables
-
-- Frontend:
-  - React + TypeScript components implementing:
-    - TransactionHistoryPage
-    - InvoiceListTable
-    - InvoiceDetailModal
-    - ExportBar
-    - FiltersBar
-  - API service layer for invoices with proper null-safety
-  - All components tested with sample data ensuring null-safety guards are active
-- Backend:
-  - Endpoints as described (or aligned with existing API conventions)
-  - Data models and migrations for invoices, invoice_items, and addresses
-- Documentation:
-  - Developer notes on data schemas, API contracts, and UI interactions
-  - How to extend for additional export formats or more granular filters
-
----
-
-If you need, I can generate starter code scaffolds (TypeScript React components, hooks, and mock data) that adhere to these safety patterns and integrate with a mocked API layer to validate the runtime guards. for style.
+This prompt is designed to guide an AI development tool to build a robust, secure, and scalable Email Verification page that integrates with the broader authentication and dashboard ecosystem, while strictly adhering to runtime safety constraints and the project’s design language. for style.
 
 CRITICAL DESIGN REQUIREMENTS:
 - You MUST follow ALL design principles and patterns specified in the Design Reference above
@@ -1777,415 +1584,222 @@ CRITICAL TECHNICAL REQUIREMENTS:
 - When Supabase is configured: use Edge Functions for LLM and server-only logic; never expose API keys in the client
 
 === TASK ===
-# Order / Transaction History
-
-This development prompt provides a complete, actionable spec for building the Order / Transaction History page along with integrated Billing & Subscription Management and Subscription Management components. The design system, runtime safety rules, and project context are incorporated to ensure a production-ready implementation with robust null-safety, proper data handling, and a premium fintech UI.
-
----
-
-## Order / Transaction History
+# Email Verification
 
 ## Overview
-Build an Order / Transaction History page that presents a list of past invoices and transactions, with capabilities to download invoices as PDF/CSV, view invoice details, and clearly display payment status. This page ties directly into Billing & Subscription Management (for invoices, plan entitlements, and billing metadata) and into the Subscription Management area (for plan changes and related entitlements). The UI should be data-forward, accessible, and performant, with clear affordances for exporting data, viewing details, and understanding payment status.
-
----
+Create an intermediate, user-facing Email Verification page that informs the user to verify their email via a tokenized link, provides the option to re-send the verification email, and displays the current verification status. This page must integrate cleanly with the project’s authentication system (signup, login, session management, password reset, email verification, and optional SAML/OAuth SSO) and fit within the unified Login/Signup flow and the Dashboard experience. The implementation must be robust against null/undefined values, guard all array operations, and adhere to the runtime safety rules outlined in the project context.
 
 ## Page Description (Full Detail)
 What this page is:
-- A dedicated historical ledger UI for invoices and transactions. It shows a paginated or virtualized list of past invoices/transactions, including metadata such as date, description, amount, currency, plan or product, status, and payment method when applicable.
+- An intermediate-state screen shown after signup or when a user needs to verify their email. It informs the user that a verification email has been sent with a tokenized link and instructs them to check their inbox (and spam) to complete verification.
 
 Goals:
-- Provide fast, predictable rendering of historical data, with robust client-side guards against null/undefined values.
-- Enable users to download individual invoices as PDF or CSV, and to export the current view (CSV/PDF or both) for multiple records.
-- Allow quick invoice viewing in a modal or drawer, including billing address, line items, taxes, totals, and payment status.
-- Integrate with Billing & Subscription Management to surface and filter by subscription plan, entitlements, and billing metadata.
-- Clearly indicate payment status (Paid, Unpaid, Past Due, Refunded, Canceled) with accessible color semantics.
-- Provide date-range filtering, search, and quick-apply presets (Last 7/30/90 days).
-- Ensure all data access follows the provided runtime safety rules (nullish coalescing, Array guards, useState defaults, etc.).
+- Clearly convey that verification is required to activate the account.
+- Provide a prominent option to re-send the verification email, with rate-limit indicators and feedback.
+- Show real-time or near-real-time verification status (e.g., polling or push-based update) to guide the user to onboarding or the Dashboard upon success.
+- Offer supportive guidance if verification fails (e.g., contact support, retry steps).
+- Align with the project’s enterprise-ready aesthetic and design language, ensuring accessibility and responsive behavior.
 
-Connected features and API interactions:
-- Billing & Subscription Management: Invoices, subscriptions, plan changes, and billing metadata are related data points. Invoice items, totals, tax, and billing address should be retrieved or joined if needed.
-- Subscription Management: Plan names, entitlements, and billing metadata should be surfaced in the list where relevant (e.g., plan name per invoice).
-- No external UI data visualizations are required, but the page should gracefully handle optional data (e.g., missing billing address, missing line items).
+UI elements and how they need to look:
+- A centered hero area with a warm, premium look and a clear headline: “Verify your email to activate your account.”
+- Subheading with concise guidance: “A verification link has been sent to you. Please click the link to verify. You can re-send the email if you didn’t receive it.”
+- Re-send verification button (primary action) with clear disabled/loading states when rate-limited or in progress.
+- Verification status indicator/status chip (e.g., Pending, Verified) with color coding.
+- Live status update: small notification area or status badge that updates as verification completes (via polling or WebSocket-like mechanism).
+- Support contact link (e.g., “Need help? Contact support”).
+- Visual guidance and hierarchy following the project’s typography and color system (primary green for CTAs, neutrals for text, subtle shadows on cards).
+- Optional: a small “Why am I seeing this?” info link or inline explanation.
 
-UI elements and visual guidance (aligned with design system):
-- A prominent header section with a large, editorial hero feel (serif display font for headings, sans-serif body) and ample white space.
-- A filter bar containing:
-  - Date range picker (from-to)
-  - Text search field (invoice number, description, or plan)
-  - Quick filter chips (All, Paid, Unpaid, Past Due, Refunded)
-  - Export button (CSV/PDF) and per-record download actions
-- A data table or card-grid of invoices/transactions with columns:
-  - Date (formatted, sortable)
-  - Invoice/Transaction ID
-  - Description (e.g., "Subscription renewal", "One-time charge")
-  - Plan/Product (if applicable)
-  - Amount (currency-aware formatting)
-  - Status (Paid, Unpaid, Past Due, Refunded, Canceled)
-  - Download (PDF/CSV)
-- Invoice detail modal/drawer:
-  - Billing address, company name, contact, tax IDs if applicable
-  - Line items (description, quantity, unit price, amount)
-  - Subtotals, taxes, discounts, total
-  - Payment method and last payment date
-  - View raw payload / audit trail toggle if needed
-- Pagination controls or infinite scrolling (prefer pagination for predictability)
-- Subtle, accessible hover/focus states and keyboard support
+Visual guidance:
+- Follow the provided visual style and color palette (greens, teals, neutrals) with a premium fintech look. Use serif display font for headings and sans-serif for body, maintain generous padding, rounded surfaces, and soft shadows.
 
-Mandatory coding standards — runtime safety (non-negotiable):
-- Supabase / API results: Always guard against null results
-  - Example: const invoices = data ?? []
-- Array operations: Guard against non-arrays or null/undefined
-  - (invoices ?? []).map(...), or Array.isArray(invoices) ? invoices.map(...) : []
-- useState defaults for arrays: initialize with proper type
-  - const [invoices, setInvoices] = useState<Invoice[]>([])
-- API response shapes: validate before usage
-  - const list = Array.isArray(response?.data) ? response.data : []
-- Optional chaining and defaults:
-  - const firstInvoice = invoices?.[0]
-  - const { items = [], count = 0 } = response ?? {}
-- Destructuring with defaults wherever API responses are consumed
-  - const { data: invoiceList = [] } = apiResponse ?? {}
+API integrations:
+- No external APIs are described for this page in the immediate context, but this page should be ready to work with the existing authentication API (e.g., endpoint to re-send verification email, endpoint to check verification status). Ensure the page handles API responses safely, with fallbacks to empty arrays/objects when needed.
 
----
+Integrated pages and flows (for context):
+- Connected to: Login / Signup page (unified authentication entry) and the Dashboard (post-verification entry point).
+- Part of the same authentication and account-management system with support for SSO (SAML/OAuth placeholder) and MFA prompts after login if enabled.
 
 ## Components to Build
-
-1) TransactionHistoryPage
-- Purpose: Orchestrates data fetching, filtering, and rendering of the list and detail modal.
-- Props: None (page-level)
-- State:
-  - invoices: Invoice[]
-  - isLoading: boolean
-  - error: string | null
-  - filter: { query: string; startDate: string | null; endDate: string | null; status: string[] }
-  - pagination: { page: number; pageSize: number; total: number }
-  - selectedInvoice: Invoice | null
-  - showDetailModal: boolean
-- Behavior:
-  - Fetch invoices with applied filters and pagination
-  - Guard all results using data ?? [] and Array.isArray checks
-  - Open detail modal on row action
-  - Trigger export of current view (CSV/PDF)
-
-2) InvoiceListTable
-- Purpose: Render a performant, accessible table of invoices
-- Props:
-  - invoices: Invoice[]
-  - onView(invoice): void
-  - onDownload(invoice, type): void
-- UI:
-  - Table with accessible header (th) and ARIA roles
-  - Sortable Date column (client-side if server-side sort not available)
-  - Row actions for PDF/CSV download
-- Accessibility:
-  - Keyboard navigable
-  - Proper aria-labels and descriptive titles
-
-3) InvoiceDetailModal
-- Purpose: Display detailed invoice information
-- Props:
-  - invoice: Invoice
-  - onClose(): void
-- UI:
-  - Billing address, company, items, taxes, totals
-  - Copyable fields where appropriate
-  - Close on Escape
-- Data handling:
-  - Safely render line items and totals with guards (e.g., (invoice.items ?? []).map(...))
-
-4) ExportBar
-- Purpose: Provide export options for current view
-- Props:
-  - invoices: Invoice[]
-  - onExport(format): void
-- UI:
-  - Dropdown or segmented control for PDF/CSV
-  - Accessible label and tooltip
-
-5) FiltersBar
-- Purpose: Date range, search, status chips
-- Props:
-  - filter: FilterState
-  - onFilterChange(nextFilter): void
-- UI:
-  - Date range pickers (start, end)
-  - Search input
-  - Status chips with inclusive multi-select
-
-6) BillingMetadataPanel (optional, in invoice detail or side panel)
-- Purpose: Show added billing metadata on a per-invoice basis
-- Props:
-  - invoice: Invoice
-
-7) API Helpers / Services
-- invoiceService.ts
-  - fetchInvoices(params): Promise<{ data: Invoice[]; total: number } | null>
-  - downloadInvoice(invoiceId, format): Promise<Blob>
-- billingService.ts
-  - fetchBillingMetadata(invoiceId): Promise<BillingMetadata | null>
-
-8) Data Models (TypeScript interfaces)
-- Invoice
-  - id: string
-  - date: string (ISO)
-  - description: string
-  - planName?: string
-  - amount: number
-  - currency: string
-  - status: 'paid' | 'unpaid' | 'past_due' | 'refunded' | 'canceled'
-  - pdfUrl?: string
-  - csvUrl?: string
-  - items?: InvoiceItem[]
-  - billingAddress?: Address
-  - paymentMethod?: string
-  - metadata?: any
-- InvoiceItem
-  - id: string
-  - description: string
-  - quantity: number
-  - unitPrice: number
-  - amount: number
-- Address
-  - line1: string
-  - line2?: string
-  - city?: string
-  - state?: string
-  - postalCode?: string
-  - country?: string
-- BillingMetadata
-  - billingAccountId?: string
-  - customerId?: string
-  - entitlements?: string[]
-- FilterState
-  - query: string
-  - startDate: string | null
-  - endDate: string | null
-  - status: string[]
-
----
+- EmailVerificationPage
+  - Props: userId, email, verificationStatus, canResend (rate-limiting state), onResend, onStatusCheck
+  - State: status (string: "pending" | "verified" | "failed"), loading (boolean), lastResendAt (timestamp)
+  - UI Elements:
+    - Header with title and subtle subtitle
+    - Status badge: Pending/Verified/Failed with color cues
+    - Re-send Verification Button: disabled when rate-limited or loading; shows spinner during resend
+    - Status Feed: small, non-intrusive area that updates as verification completes
+    - Support Link: “Need help? Contact support”
+  - Behavior:
+    - On mount, start a light polling mechanism to check verification status (e.g., every 15-30 seconds) using a safe approach (guard against nulls, etc.)
+    - When user clicks Resend, call an API to resend verification email; apply rate-limit UI feedback
+    - If status becomes verified, navigate to onboarding or Dashboard after a short confirmation delay
+- ResendVerificationButton (sub-component)
+  - Handles disabled/loading states and rate-limiting messaging
+- StatusIndicator (sub-component)
+  - Renders status badge with accessible aria-label and color
+- SupportLink
+  - Simple anchor or modal trigger to contact support
 
 ## Implementation Requirements
 
 ### Frontend
-
-- Architecture:
-  - Use a modular component architecture with clear separation of concerns.
-  - Use React with TypeScript (or your preferred TS framework) and a state management approach suitable for the app (e.g., useState/useEffect, context, or lightweight store if present).
-  - Ensure all components are accessible (ARIA roles, keyboard interactions).
-
-- UI Components:
-  - Responsive layout with a centered content column, max width 900–1000px for the hero/content area, and generous padding as per design language.
-  - Cards for individual invoices or a table layout with proper cell padding, readable fonts, and hover/focus states.
-  - Buttons: Primary green (#2f6f63), Secondary teal/gray-teal (#2b6250) with accessible contrast.
-  - Modals/Drawers: Invoice detail modal with focus trap and escape-to-close behavior.
-
-- Data Handling:
-  - All data fetches should safely handle nulls: data ?? [], Array.isArray checks, and defaults for missing fields.
-  - Dates should be displayed in a user-friendly format (e.g., MM/DD/YYYY or locale format) with consistent time zone handling.
-  - Currency formatting must respect the invoice currency (e.g., USD, EUR) using Intl.NumberFormat.
-
-- Interactions:
-  - Date range filters must constrain inputs and debounce rapid changes to reduce re-fetching.
-  - Search must debounce (e.g., 250ms) to avoid excessive requests.
-  - Sorting (if implemented) should be stable and reflect in accessible text for screen readers.
-  - Downloads must initiate a non-blocking fetch and trigger a blob download with correct file naming.
-
-- Backend and API layer (assumed available endpoints; implement stubs where needed):
-  - GET /invoices?startDate=&endDate=&query=&status=&page=&pageSize=
-  - GET /invoices/:id (for detail)
-  - GET /invoices/:id/download?format=pdf|csv
-  - GET /billing/:invoiceId/metadata (optional; surface billing metadata)
-  - Security: Ensure endpoints require proper authentication tokens or session cookies; handle 401/403 gracefully.
-
-- Validation:
-  - Validate responses: const list = Array.isArray(response?.data) ? response.data : []
-  - Ensure numeric amounts are finite: Number.isFinite(amount)
-  - Ensure required fields exist before rendering; gracefully degrade if missing (e.g., show "N/A" for missing plan or address).
-
-- Performance:
-  - Implement pagination or virtualization for large lists.
-  - Use memoization where appropriate (e.g., computed status counts, filtered lists).
+- Pages:
+  - EmailVerificationPage.tsx (React)
+- Components:
+  - EmailVerificationPage, ResendVerificationButton, StatusIndicator
+- State management:
+  - Use React useState and useEffect with correct defaults (e.g., useState<string>("pending"), useState<boolean>(false))
+- Data safety:
+  - Guard all array and object accesses with Array.isArray() and optional chaining where appropriate
+  - Use data ?? [] patterns for any array results
+  - Validate API responses: ensure response?.data is an array before mapping
+- API calls (placeholders to integrate with existing backend):
+  - POST /api/auth/resend-verification with { userId, email } and handle rate-limiting messaging
+  - GET /api/auth/verification-status?userId=... to poll for status
+- Routing:
+  - On successful verification, redirect to the next step (onboarding or dashboard) using a controlled transition
+- Accessibility:
+  - All interactive elements accessible (aria-labels, keyboard navigable)
+  - Color contrast meets WCAG guidelines
+- State defaults:
+  - Ensure default states reflect an initial “pending verification” status
 
 ### Backend
-
-- APIs/Endpoints:
-  - Invoice retrieval with filtering and pagination
-  - Invoice detail retrieval
-  - Invoice download generation (PDF/CSV) with deterministic naming
-  - Optional: billing metadata retrieval
-- Database Tables (schemas; simplified):
-  - invoices
-    - id (PK)
-    - date (timestamp)
-    - description (text)
-    - plan_name (text, nullable)
-    - amount (numeric)
-    - currency (text)
-    - status (text) // paid, unpaid, past_due, refunded, canceled
-    - pdf_url (text, nullable)
-    - csv_url (text, nullable)
-    - billing_address_id (FK)
-    - payment_method (text, nullable)
-  - invoice_items
-    - id (PK)
-    - invoice_id (FK)
-    - description (text)
-    - quantity (int)
-    - unit_price (numeric)
-    - amount (numeric)
-  - addresses
-    - id (PK)
-    - line1, line2, city, state, postalCode, country
-  - billing_metadata
-    - invoice_id (FK)
-    - billing_account_id (text)
-    - customer_id (text)
-    - entitlements (text array)
-
-- Business Logic:
-  - Enforce null-safety at the API level; ensure that missing fields return defaults in the response shape.
-  - Ensure idempotent and retry-safe download endpoints; generate PDFs/CSVs with deterministic naming like invoice_{id}.pdf.
-  - Apply rate-limiting on export endpoints to protect resources.
+- Endpoints to be consumed by frontend:
+  - POST /api/auth/resend-verification
+    - Input: { userId: string, email: string }
+    - Output: { success: boolean, message?: string, cooldown?: number }
+  - GET /api/auth/verification-status?userId=...
+    - Output: { status: "pending" | "verified" | "failed", updatedAt?: string }
+- Database considerations:
+  - Ensure verification records reflect status changes and can be queried idempotently
+  - Protect endpoints with authentication and proper authorization
+- Rate limiting and idempotency:
+  - Resend endpoint should enforce rate limits (per-user, per-email) and respond with clear cooldown information
 
 ### Integration
-
-- Data Flow:
-  - Frontend calls fetchInvoices with filters; backend returns invoices array (and total count) with safe defaults.
-  - User selects an invoice to view; frontend calls fetchInvoiceDetail or fetches embedded detail from the list if included.
-  - User clicks download; frontend calls downloadInvoice with format; response triggers file download via blob link.
-- State Sync:
-  - When a user applies filters, the page resets to page 1 and fetches new data.
-  - When an invoice detail is opened, ensure that related billing metadata is available; if not, fetch additional data.
-
----
+- Data flow:
+  - EmailVerificationPage fetches status via status API and updates UI
+  - Resend action triggers resend API; UI shows loading and potential cooldown
+  - On status === "verified", trigger navigation to onboarding/dashboard
+- Error handling:
+  - Graceful handling of API failures with user-friendly messages
+  - Fallback UI when API returns null or unexpected shapes
+- State synchronization:
+  - Use a single source of truth for verification status in the component; do not rely on stale props
+  - Ensure nullish checks around data from API before applying map/filter/reduce
+- Security:
+  - Ensure endpoints require authentication; avoid leaking verification tokens or sensitive data in the client
 
 ## User Experience Flow
-
-1) User lands on Order / Transaction History page
-- See a hero/header area with a clean, premium fintech aesthetic.
-- A FiltersBar at the top with date range, search, and status chips.
-- A list/table of invoices with columns: Date, ID, Description, Plan, Amount, Currency, Status, Downloads.
-- A prominent Export button in the filter area to export current view (CSV/PDF).
-
-2) User applies date range or search
-- Page shows a loading state (spinning indicator or skeleton rows).
-- Invoices list updates to reflect filters, with correct null-safe rendering and price formatting.
-
-3) User filters by status (Paid, Unpaid, Past Due, Refunded, Canceled)
-- List updates to match selections; counts can be surfaced if needed.
-
-4) User clicks an invoice row or actions
-- InvoiceDetailModal opens, showing full details: billing address, line items, taxes, totals, and payment method.
-- Option to close the modal with Escape or an on-screen close button.
-
-5) User downloads an invoice
-- Click PDF/CSV download for a specific invoice.
-- Browser triggers file download; UI shows a brief success toast or non-blocking confirmation.
-
-6) User uses Export
-- Clicks Export for CSV or PDF; a file downloads for the current view range and filters.
-
-7) Edge cases
-- No invoices found: show empty state with guidance to adjust filters.
-- Partial data: render available fields with fallbacks (e.g., description missing -> "No description").
-
----
+1. User completes signup or needs to verify an email.
+2. User lands on Email Verification page with message: “A verification email has been sent to your address. Please verify to activate your account.”
+3. UI shows:
+   - Verification status: Pending
+   - Re-send button: Primary action (enabled unless rate-limited)
+   - Support link for help
+4. System polls verification status periodically (e.g., every 15 seconds) and updates UI when status changes to Verified.
+5. If verification succeeds, automatically navigate to onboarding or Dashboard after a brief confirmation
+   - Optionally show a toast or inline message: “Email verified. Redirecting…”
+6. If user does not receive email, they tap Re-send; system triggers resend and shows a loading state, then a success message or cooldown notice
+7. If verification never completes or fails, provide support contact and fallback guidance
+8. All UI states respect the design system and are responsive across devices
 
 ## Technical Specifications
-
-- Data Models: (TypeScript interfaces)
-  - Invoice, InvoiceItem, Address, BillingMetadata, FilterState
-- API Endpoints (example):
-  - GET /api/invoices?startDate=&endDate=&query=&status=&page=&pageSize=
-  - GET /api/invoices/{id}
-  - GET /api/invoices/{id}/download?format=pdf|csv
-  - GET /api/invoices/{id}/billing-metadata
+- Data Models:
+  - User: { id: string, email: string, isVerified: boolean, ... }
+  - VerificationStatus: { userId: string, status: "pending" | "verified" | "failed", lastUpdated: string, cooldownUntil?: string }
+- API Endpoints:
+  - POST /api/auth/resend-verification
+    - Body: { userId: string, email: string }
+    - Response: { ok: boolean, cooldown?: number, message?: string }
+  - GET /api/auth/verification-status
+    - Query: userId
+    - Response: { status: "pending" | "verified" | "failed", lastUpdated: string }
 - Security:
-  - JWT/token-based authentication; include Authorization header
-  - Server-side authorization checks for access to invoices
-  - Error handling for 401/403, with user-friendly messages
-- Validation Rules:
-  - Dates are ISO strings; validate format before sending
-  - Ensure numeric fields (amount, unitPrice) are finite numbers
-  - Validate that status is one of allowed values
-- Data Handling Rules (Runtime Safety):
-  - const invoices = data ?? []
-  - const list = Array.isArray(response?.data) ? response.data : []
-  - Initialize arrays with useState<Type[]>([])
-  - Optional chaining for nested fields (invoice?.billingAddress?.city)
-
----
+  - JWT/session-based authentication for endpoints
+  - Role-based access control if applicable (enterprise onboarding vs regular user)
+  - Rate limiting on resend to prevent abuse
+- Validation:
+  - Validate email format where applicable
+  - Ensure userId is present and authenticated
+  - Use optional chaining and default values to guard against null responses
+- State and performance:
+  - Polling interval should be configurable but sensible (e.g., 15-30s)
+  - Debounce or cancel previous polls on unmount
+- Testing:
+  - Unit tests for EmailVerificationPage with mocked API responses (pending, verified, failed)
+  - Integration tests for resend flow and status polling
+  - E2E tests covering successful verification and redirection
 
 ## Acceptance Criteria
-
-- [ ] The page renders a searchable, filterable list of invoices with correct date formatting, amount formatting, and status display.
-- [ ] All data accesses guard against null/undefined: (data ?? []), Array.isArray checks, and proper useState([]) initialization.
-- [ ] Invoice detail modal opens on request and shows complete information (billing address, line items, totals, payment method) with proper guards for missing fields.
-- [ ] PDF/CSV downloads for individual invoices work reliably; downloads trigger with correct file naming and content-type.
-- [ ] Export current view (CSV/PDF) works with applied filters and pagination; backend handles large exports without breaking the UI.
-- [ ] Date range and search filters debounce appropriately; loading states appear during fetches.
-- [ ] Security: API endpoints require authentication; 401/403s are handled gracefully in the UI with prompts to re-authenticate.
-- [ ] UI adheres to the design system and visual style, including typography, color palette, spacing, and responsive behavior.
-
----
+- [ ] Email Verification page renders with correct messaging and a functional Re-send button that respects rate limits and shows loading state
+- [ ] Status polling correctly updates UI from Pending to Verified and redirects to onboarding/dashboard
+- [ ] Resend endpoint responds with cooldown information; UI disables button during cooldown and shows appropriate message
+- [ ] All array/object operations guard against null/undefined values using the enforced runtime safety patterns (data ?? [], Array.isArray(), etc.)
+- [ ] Frontend uses useState([]) for any array state, with proper type annotations and defaults
+- [ ] API responses are validated: responses with data mapped only if Array.isArray(response?.data) else default to []
+- [ ] No crash on null or missing API fields; component remains responsive and accessible
+- [ ] Visuals align with the project’s design system, including typography, color palette, spacing, and card/shadow behavior
+- [ ] Authentication and authorization checks are enforced for API endpoints
 
 ## UI/UX Guidelines
+Apply the project's design system:
+- Maintain consistent header/navigation patterns with white top nav, logo left, centered links, and actions on the right
+- Use the specified color palette for CTAs, accents, and surfaces
+- Implement hero-area emphasis with generous padding and a clean, premium feel
+- Cards should be pure white with 16-20px corner radii and soft shadows; hover/focus interactions should lift the card slightly
+- Interactive elements: rounded primary green buttons, secondary actions with lighter fills or outlines; clear focus rings
+- Ensure responsive behavior with comfortable spacing across devices
 
-Apply the project's design system and visual style:
-- Color Palette:
-  - Primary Green: #2f6f63
-  - Secondary Teal/Gray-Teal: #2b6250
-  - Neutral White: #ffffff
-  - Page Background Taupe: #a79e96
-  - Hero Beige: #f3efe6
-  - Text Dark: #1f1f1f
-  - Body Text Gray: #555555
-  - Card Shadow: rgba(0,0,0,0.08)
-  - Accent Brown: #3b2b1e
-  - Accent Orange: #e07a4c
-- Typography:
-  - Headings: serif display font (Playfair Display or Georgia)
-  - Body: sans-serif (Inter or Roboto)
-- Layout:
-  - Wide hero with centered content; max content width 900–1000px for the hero
-  - Generous left/right padding; rounded card surfaces; soft shadows
-- Key Design Elements:
-  - Cards: 16–20px radius, 0 6px 20px rgba(0,0,0,0.08) shadow, hover lift
-  - Navigation: white top bar, centered links, right-aligned actions; primary action button in green
-  - Interactive Elements: rounded CTAs, forms with light borders, focus rings in green
-- Data Visualization:
-  - Not required; if added, use the same neutral palette with teal/green accents
+## Visual Style
+
+### Color Palette
+- Primary Green: #2f6f63
+- Secondary Teal/Gray-Teal: #2b6250
+- Neutral White: #ffffff
+- Page Background Taupe: #a79e96
+- Hero Beige: #f3efe6
+- Text Dark: #1f1f1f
+- Body Text Gray: #555555
+- Card Shadow: rgba(0,0,0,0.08)
+- Accent Brown (floating card): #3b2b1e
+- Accent Orange (floating card CTA): #e07a4c
+
+### Typography & Layout
+- Heading Typography: serif display font (Playfair Display or Georgia)
+- Body Typography: sans-serif (Inter or Roboto)
+- Hierarchy: large hero heading, medium subheading, small muted body
+- Layout: wide hero, max content width ~900–1000px, 12-column implied grid
+- Spacing: generous vertical rhythm, 24–32px gaps between sections
+
+### Key Design Elements
+- Card Design: white cards, 16–20px radii, subtle shadows, hover lift
+- Navigation: white top bar, logo left, centered links, right-side actions
+- Data Visualization: neutral with teal/green accents, minimalistic
+- Interactive Elements: rounded CTAs, focus rings, clear hover/active states
+
+### Design Philosophy
+- Professional, premium fintech aesthetic; calm, trustworthy color story
+- Clean, data-forward visuals for enterprise users
+- Serif headlines with sans-serif body for contrast
+- Subtle depth via shadows and rounded geometry
+
+## Mandatory Coding Standards — Runtime Safety
+
+CRITICAL: Follow these rules in ALL generated code to prevent runtime crashes.
+
+1. Supabase query results: Always use nullish coalescing — const items = data ?? [].
+2. Array methods: Never call on a value that could be null/undefined/non-array. Guard: (items ?? []).map(...) or Array.isArray(items) ? items.map(...) : [].
+3. React useState for arrays/objects: Initialize with correct type — useState<Type[]>([]).
+4. API response shapes: Validate — const list = Array.isArray(response?.data) ? response.data : [].
+5. Optional chaining: Use obj?.property?.nested when accessing nested API fields.
+6. Destructuring with defaults: const { items = [], count = 0 } = response ?? {}.
 
 ---
 
-## Visual Style (Reinforced)
-
-The Order / Transaction History page should reflect the premium fintech aesthetic described in the project’s Visual Style section. The UI should feel calm, data-forward, and enterprise-ready. Ensure consistent typography, spacing, and color usage across all components.
-
----
-
-## Deliverables
-
-- Frontend:
-  - React + TypeScript components implementing:
-    - TransactionHistoryPage
-    - InvoiceListTable
-    - InvoiceDetailModal
-    - ExportBar
-    - FiltersBar
-  - API service layer for invoices with proper null-safety
-  - All components tested with sample data ensuring null-safety guards are active
-- Backend:
-  - Endpoints as described (or aligned with existing API conventions)
-  - Data models and migrations for invoices, invoice_items, and addresses
-- Documentation:
-  - Developer notes on data schemas, API contracts, and UI interactions
-  - How to extend for additional export formats or more granular filters
-
----
-
-If you need, I can generate starter code scaffolds (TypeScript React components, hooks, and mock data) that adhere to these safety patterns and integrate with a mocked API layer to validate the runtime guards.
+This prompt is designed to guide an AI development tool to build a robust, secure, and scalable Email Verification page that integrates with the broader authentication and dashboard ecosystem, while strictly adhering to runtime safety constraints and the project’s design language.
 
 === SUCCESS CRITERIA ===
 # Success Criteria Checklist
