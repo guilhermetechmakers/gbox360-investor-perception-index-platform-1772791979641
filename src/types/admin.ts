@@ -31,14 +31,50 @@ export interface AdminUser {
   lastLogin?: string
 }
 
+/** Event type taxonomy for audit logs */
+export type AuditLogEventType = "INGESTION" | "EXPORT" | "WEIGHT_SIM" | "REPLAY"
+
+/** Retention status for exported/archived data */
+export type RetentionStatus = "RETAINED" | "EVICTED"
+
+/** Full audit log entry — immutable, read-only */
+export interface AuditLogEntry {
+  id: string
+  timestamp: string
+  event_type: AuditLogEventType
+  actor_id: string
+  actor_email: string
+  tenant_id: string
+  tenant_name: string
+  event_id: string
+  payload_id: string
+  description: string
+  retention_status: RetentionStatus
+  payload_reference_uri: string
+  raw_payload_present: boolean
+  /** Alias for raw_payload_present */
+  payload_present?: boolean
+}
+
+/** Legacy shape for backward compatibility with API responses */
 export interface AuditLog {
   id: string
   eventType: string
-  source: string
-  actor: string
+  source?: string
+  actor?: string
   timestamp: string
   payloadRef?: string
   tenantId?: string
+  /** Mapped from event_type */
+  event_type?: AuditLogEventType
+  actor_email?: string
+  tenant_name?: string
+  event_id?: string
+  payload_id?: string
+  description?: string
+  retention_status?: string
+  payload_reference_uri?: string
+  raw_payload_present?: boolean
 }
 
 export interface IngestionEvent {
@@ -93,18 +129,38 @@ export interface AdminAlert {
 export interface AuditLogsParams {
   tenantId?: string
   eventType?: string
+  eventTypes?: AuditLogEventType[]
+  actor?: string
+  search?: string
   start?: string
   end?: string
+  startDate?: string
+  endDate?: string
   page?: number
   pageSize?: number
+  retentionStatus?: string
 }
 
 export interface AuditLogsResponse {
-  items: AuditLog[]
   data?: AuditLog[]
+  items?: AuditLog[]
   count: number
   page: number
   pageSize: number
+}
+
+export interface AuditLogExportParams {
+  startDate?: string
+  endDate?: string
+  eventTypes?: AuditLogEventType[]
+  tenantId?: string
+  actor?: string
+  search?: string
+}
+
+export interface AuditLogExportResponse {
+  url?: string
+  error?: string
 }
 
 export interface InviteUserInput {

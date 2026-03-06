@@ -11,8 +11,11 @@ import {
   mockUsers,
 } from "@/lib/admin-mock"
 import type {
+  AuditLog,
   AuditLogsParams,
   AuditLogsResponse,
+  AuditLogExportParams,
+  AuditLogExportResponse,
   DashboardHealth,
   Payload,
   Replay,
@@ -74,18 +77,27 @@ export const adminApi = {
       const q = new URLSearchParams()
       if (params.tenantId) q.set("tenantId", params.tenantId)
       if (params.eventType) q.set("eventType", params.eventType)
-      if (params.start) q.set("start", params.start)
-      if (params.end) q.set("end", params.end)
+      if (params.actor) q.set("actor", params.actor)
+      if (params.search) q.set("search", params.search)
+      if (params.start) q.set("startDate", params.start)
+      if (params.end) q.set("endDate", params.end)
+      if (params.retentionStatus) q.set("retentionStatus", params.retentionStatus)
       if (params.page != null) q.set("page", String(params.page))
       if (params.pageSize != null) q.set("pageSize", String(params.pageSize))
+      const eventTypes = params.eventTypes ?? []
+      if (Array.isArray(eventTypes) && eventTypes.length > 0) {
+        eventTypes.forEach((t) => q.append("eventTypes", t))
+      }
       const query = q.toString()
       const res = await api.get<AuditLogsResponse | { data?: unknown[]; items?: unknown[] }>(
         `/admin/audit-logs${query ? `?${query}` : ""}`
       )
-      const r = res as AuditLogsResponse & { data?: unknown[] }
-      const items = safeArray(r?.items ?? r?.data)
+      const r = res as AuditLogsResponse & { data?: unknown[]; items?: unknown[] }
+      const rawItems = safeArray(r?.items ?? r?.data)
+      const items = rawItems as AuditLog[]
       if (items.length > 0 || (r?.count !== undefined && r?.count === 0)) {
         return {
+          data: items,
           items,
           count: r?.count ?? items.length,
           page: r?.page ?? params.page ?? 1,
@@ -96,6 +108,33 @@ export const adminApi = {
       /* fall through to mock */
     }
     return mockAuditLogs
+  },
+
+  exportAuditLogs: async (params: AuditLogExportParams = {}): Promise<AuditLogExportResponse> => {
+    try {
+      const res = await api.post<{ url?: string }>("/admin/audit-logs/export", params)
+      if (res?.url) return { url: res.url }
+    } catch (err) {
+      /* fall through to mock */
+    }
+    // Mock: generate CSV from mock data for dev/demo
+    const { items } = mockAuditLogs
+    const headers = ["id", "timestamp", "event_type", "actor", "tenant", "event_id", "payload_id", "description", "retention_status"]
+    const rows = (items ?? []).map((log) => [
+      log.id,
+      log.timestamp ?? "",
+      (log.event_type ?? log.eventType ?? "").replace(/_/g, " "),
+      log.actor_email ?? log.actor ?? "",
+      log.tenant_name ?? log.tenantId ?? "",
+      log.event_id ?? "",
+      log.payload_id ?? log.payloadRef ?? "",
+      (log.description ?? "").replace(/"/g, '""'),
+      log.retention_status ?? "RETAINED",
+    ])
+    const csv = [headers.join(","), ...rows.map((r) => r.map((c) => `"${String(c)}"`).join(","))].join("\n")
+    const blob = new Blob([csv], { type: "text/csv" })
+    const url = URL.createObjectURL(blob)
+    return { url }
   },
 
   getAuditLogPayload: async (id: string): Promise<Payload | null> => {

@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react"
+import { useState, useMemo, useCallback } from "react"
+import { useDebounce } from "@/hooks/useDebounce"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,28 +11,46 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { AnimatedPage } from "@/components/AnimatedPage"
 import { FileText, ChevronLeft, ChevronRight, ExternalLink } from "lucide-react"
-import { useAdminAuditLogs, useAdminAuditLogPayload, useAdminTenants } from "@/hooks/useAdmin"
+import { useAdminAuditLogs, useAdminAuditLogPayload, useAdminTenants, useAdminAuditLogExport, useAdminDashboardHealth } from "@/hooks/useAdmin"
 import { safeArray } from "@/lib/data-guard"
 import { format } from "date-fns"
+import { subDays } from "date-fns"
+import { HealthRibbon } from "@/components/admin/HealthRibbon"
+import { PayloadViewerModal } from "@/components/admin/PayloadViewerModal"
+import { CSVExportButton, type ExportStatus } from "@/components/admin/CSVExportButton"
+import { DataAccessGuard } from "@/components/admin/DataAccessGuard"
+import type { AuditLog, AuditLogEventType } from "@/types/admin"
+import { cn } from "@/lib/utils"
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100]
 const DEFAULT_PAGE_SIZE = 25
+const EVENT_TYPES: AuditLogEventType[] = ["INGESTION", "EXPORT", "WEIGHT_SIM", "REPLAY"]
+const DEBOUNCE_MS = 300
+
+function getDefaultDateRange() {
+  const end = new Date()
+  const start = subDays(end, 7)
+  return {
+    start: format(start, "yyyy-MM-dd"),
+    end: format(end, "yyyy-MM-dd"),
+  }
+}
 
 export default function AdminAuditLogs() {
+  const defaultRange = useMemo(() => getDefaultDateRange(), [])
   const [tenantId, setTenantId] = useState<string>("")
-  const [eventType, setEventType] = useState<string>("")
-  const [start, setStart] = useState<string>("")
-  const [end, setEnd] = useState<string>("")
+  const [eventTypes, setEventTypes] = useState<AuditLogEventType[]>([])
+  const [actorSearch, setActorSearch] = useState<string>("")
+  const [search, setSearch] = useState<string>("")
+  const debouncedActor = useDebounce(actorSearch, DEBOUNCE_MS)
+  const debouncedSearch = useDebounce(search, DEBOUNCE_MS)
+  const [start, setStart] = useState<string>(defaultRange.start)
+  const [end, setEnd] = useState<string>(defaultRange.end)
+  const [retentionStatus, setRetentionStatus] = useState<string>("")
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
   const [payloadId, setPayloadId] = useState<string | null>(null)
@@ -39,39 +58,97 @@ export default function AdminAuditLogs() {
   const params = useMemo(
     () => ({
       tenantId: tenantId || undefined,
-      eventType: eventType || undefined,
+      eventTypes: eventTypes.length > 0 ? eventTypes : undefined,
+      actor: debouncedActor || undefined,
+      search: debouncedSearch || undefined,
       start: start || undefined,
       end: end || undefined,
+      retentionStatus: retentionStatus || undefined,
       page,
       pageSize,
     }),
-    [tenantId, eventType, start, end, page, pageSize]
+    [tenantId, eventTypes, debouncedActor, debouncedSearch, start, end, retentionStatus, page, pageSize]
   )
 
   const { data: auditRes, isLoading } = useAdminAuditLogs(params)
   const { data: tenants = [] } = useAdminTenants()
   const { data: payload, isLoading: payloadLoading } = useAdminAuditLogPayload(payloadId)
+  const { data: healthData } = useAdminDashboardHealth()
+  const exportMutation = useAdminAuditLogExport()
 
   const tenantsList = safeArray(tenants)
-  const logs = auditRes?.data ?? []
+  const logs: AuditLog[] = Array.isArray(auditRes?.data) ? auditRes.data : (auditRes?.items ?? [])
   const count = auditRes?.count ?? 0
   const totalPages = Math.max(1, Math.ceil(count / pageSize))
 
+  const exportStatus: ExportStatus = exportMutation.isPending ? "in_progress" : exportMutation.isError ? "failed" : exportMutation.isSuccess ? "complete" : "idle"
+
+  const exportParams = useMemo(
+    () => ({
+      startDate: start || undefined,
+      endDate: end || undefined,
+      eventTypes: eventTypes.length > 0 ? eventTypes : undefined,
+      tenantId: tenantId || undefined,
+      actor: debouncedActor || undefined,
+      search: debouncedSearch || undefined,
+    }),
+    [start, end, eventTypes, tenantId, debouncedActor, debouncedSearch]
+  )
+
+  const toggleEventType = (type: AuditLogEventType) => {
+    setEventTypes((prev) =>
+      prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]
+    )
+    setPage(1)
+  }
+
+  const handleExport = useCallback(
+    (p: import("@/types/admin").AuditLogExportParams) => {
+      exportMutation.mutate(p)
+    },
+    [exportMutation]
+  )
+
+  const clearFilters = useCallback(() => {
+    setTenantId("")
+    setEventTypes([])
+    setActorSearch("")
+    setSearch("")
+    setStart(defaultRange.start)
+    setEnd(defaultRange.end)
+    setRetentionStatus("")
+    setPage(1)
+  }, [defaultRange])
+
+  const health = healthData?.health
+  const payloadContent = payload?.data ?? null
+
   return (
-    <AnimatedPage>
+    <DataAccessGuard permission="audit_logs">
+      <AnimatedPage>
       <div className="mx-auto max-w-6xl space-y-6">
-        <div>
-          <h1 className="font-display text-2xl font-semibold tracking-tight">Audit Logs</h1>
-          <p className="text-muted-foreground">
-            Immutable event log. Filter by tenant, event type, and date range.
-          </p>
+        {/* Header with Health Ribbon */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground">
+              Audit Logs
+            </h1>
+            <p className="text-muted-foreground">
+              Immutable audit trail. Filter by tenant, event type, actor, and date range.
+            </p>
+          </div>
+          <HealthRibbon
+            status={health?.workerStatus}
+            queueLength={health?.ingestionQueueLength ?? 0}
+            lastJobAt={health?.lastSuccessfulJobAt ?? null}
+          />
         </div>
 
         {/* Filters */}
         <Card className="card-elevated rounded-[1rem] border border-border bg-card shadow-card">
           <CardHeader>
             <CardTitle className="font-display text-lg">Filters</CardTitle>
-            <CardDescription>Narrow by tenant, event type, and date</CardDescription>
+            <CardDescription>Narrow by tenant, event type, actor, and date</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -92,21 +169,49 @@ export default function AdminAuditLogs() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="eventType">Event type</Label>
-                <Select value={eventType || "all"} onValueChange={(v) => setEventType(v === "all" ? "" : v)}>
-                  <SelectTrigger id="eventType">
-                    <SelectValue placeholder="All types" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All types</SelectItem>
-                    <SelectItem value="ingestion">Ingestion</SelectItem>
-                    <SelectItem value="export">Export</SelectItem>
-                    <SelectItem value="weight_simulation">Weight simulation</SelectItem>
-                    <SelectItem value="replay">Replay</SelectItem>
-                    <SelectItem value="user_invite">User invite</SelectItem>
-                    <SelectItem value="user_deactivate">User deactivate</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label>Event types</Label>
+                <div className="flex flex-wrap gap-2" role="group" aria-label="Event type filters">
+                  {EVENT_TYPES.map((type) => {
+                    const selected = eventTypes.includes(type)
+                    return (
+                      <button
+                        key={type}
+                        type="button"
+                        onClick={() => toggleEventType(type)}
+                        className={cn(
+                          "rounded-full px-3 py-1.5 text-sm font-medium transition-colors",
+                          selected
+                            ? "bg-primary text-primary-foreground"
+                            : "border border-border bg-muted/50 text-muted-foreground hover:bg-muted"
+                        )}
+                        aria-pressed={selected}
+                        aria-label={`Filter by ${type}`}
+                      >
+                        {type.replace("_", " ")}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="actor">Actor / Email</Label>
+                <Input
+                  id="actor"
+                  type="text"
+                  placeholder="Search by actor..."
+                  value={actorSearch}
+                  onChange={(e) => setActorSearch(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="search">Search</Label>
+                <Input
+                  id="search"
+                  type="text"
+                  placeholder="Search description..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="start">Start date</Label>
@@ -126,19 +231,22 @@ export default function AdminAuditLogs() {
                   onChange={(e) => setEnd(e.target.value)}
                 />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="retention">Retention</Label>
+                <Select value={retentionStatus || "all"} onValueChange={(v) => setRetentionStatus(v === "all" ? "" : v)}>
+                  <SelectTrigger id="retention">
+                    <SelectValue placeholder="All" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                    <SelectItem value="RETAINED">Retained</SelectItem>
+                    <SelectItem value="EVICTED">Evicted</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <div className="mt-4 flex flex-wrap items-center gap-4">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setTenantId("")
-                  setEventType("")
-                  setStart("")
-                  setEnd("")
-                  setPage(1)
-                }}
-              >
+              <Button variant="outline" size="sm" onClick={clearFilters}>
                 Clear filters
               </Button>
               <div className="flex items-center gap-2">
@@ -170,14 +278,22 @@ export default function AdminAuditLogs() {
 
         {/* Table */}
         <Card className="card-elevated rounded-[1rem] border border-border bg-card shadow-card">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 font-display">
-              <FileText className="h-5 w-5 text-primary" />
-              Log entries
-            </CardTitle>
-            <CardDescription>
-              {count} result(s). Click payload reference to view raw payload.
-            </CardDescription>
+          <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-4">
+            <div>
+              <CardTitle className="flex items-center gap-2 font-display">
+                <FileText className="h-5 w-5 text-primary" />
+                Log entries
+              </CardTitle>
+              <CardDescription>
+                {count} result(s). Click payload reference to view raw payload.
+              </CardDescription>
+            </div>
+            <CSVExportButton
+              onExport={handleExport}
+              status={exportStatus}
+              params={exportParams}
+              disabled={logs.length === 0}
+            />
           </CardHeader>
           <CardContent>
             {isLoading ? (
@@ -193,45 +309,32 @@ export default function AdminAuditLogs() {
             ) : (
               <>
                 <ScrollArea className="w-full">
-                  <div className="min-w-[640px]">
-                    <table className="w-full border-collapse text-sm">
+                  <div className="min-w-[800px]">
+                    <table
+                      className="w-full border-collapse text-sm"
+                      role="grid"
+                      aria-label="Audit log entries"
+                    >
                       <thead>
                         <tr className="border-b border-border bg-muted/30">
+                          <th className="p-3 text-left font-medium">Date / Time</th>
                           <th className="p-3 text-left font-medium">Event type</th>
-                          <th className="p-3 text-left font-medium">Source</th>
                           <th className="p-3 text-left font-medium">Actor</th>
-                          <th className="p-3 text-left font-medium">Timestamp</th>
+                          <th className="p-3 text-left font-medium">Tenant</th>
+                          <th className="p-3 text-left font-medium">Event ID</th>
+                          <th className="p-3 text-left font-medium">Payload ID</th>
+                          <th className="p-3 text-left font-medium">Description</th>
+                          <th className="p-3 text-left font-medium">Retention</th>
                           <th className="p-3 text-left font-medium">Payload</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {(logs ?? []).map((log) => (
-                          <tr
+                        {logs.map((log) => (
+                          <AuditLogRow
                             key={log.id}
-                            className="border-b border-border transition-colors hover:bg-muted/30"
-                          >
-                            <td className="p-3">{log.eventType}</td>
-                            <td className="p-3">{log.source}</td>
-                            <td className="p-3">{log.actor}</td>
-                            <td className="p-3 text-muted-foreground">
-                              {log.timestamp ? format(new Date(log.timestamp), "PPp") : "—"}
-                            </td>
-                            <td className="p-3">
-                              {log.payloadRef ? (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-8 gap-1 text-primary"
-                                  onClick={() => setPayloadId(log.id)}
-                                >
-                                  <ExternalLink className="h-4 w-4" />
-                                  View
-                                </Button>
-                              ) : (
-                                <span className="text-muted-foreground">—</span>
-                              )}
-                            </td>
-                          </tr>
+                            log={log}
+                            onViewPayload={() => setPayloadId(log.id)}
+                          />
                         ))}
                       </tbody>
                     </table>
@@ -244,12 +347,13 @@ export default function AdminAuditLogs() {
                     <p className="text-sm text-muted-foreground">
                       Page {page} of {totalPages} · {count} total
                     </p>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2" role="navigation" aria-label="Pagination">
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => setPage((p) => Math.max(1, p - 1))}
                         disabled={page <= 1}
+                        aria-label="Previous page"
                       >
                         <ChevronLeft className="h-4 w-4" />
                         Previous
@@ -259,6 +363,7 @@ export default function AdminAuditLogs() {
                         size="sm"
                         onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                         disabled={page >= totalPages}
+                        aria-label="Next page"
                       >
                         Next
                         <ChevronRight className="h-4 w-4" />
@@ -272,27 +377,83 @@ export default function AdminAuditLogs() {
         </Card>
       </div>
 
-      {/* Payload viewer modal */}
-      <Dialog open={!!payloadId} onOpenChange={(open) => !open && setPayloadId(null)}>
-        <DialogContent className="max-h-[85vh] max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Raw payload</DialogTitle>
-          </DialogHeader>
-          {payloadLoading ? (
-            <Skeleton className="h-48 w-full" />
-          ) : payload?.data != null ? (
-            <ScrollArea className="h-[50vh] w-full rounded-lg border border-border bg-muted/20 p-4">
-              <pre className="text-xs text-foreground whitespace-pre-wrap break-all font-mono">
-                {typeof payload.data === "string"
-                  ? payload.data
-                  : JSON.stringify(payload.data, null, 2)}
-              </pre>
-            </ScrollArea>
-          ) : (
-            <p className="text-muted-foreground">No payload data for this entry.</p>
+      <PayloadViewerModal
+        open={!!payloadId}
+        onOpenChange={(open) => !open && setPayloadId(null)}
+        payload={payloadContent}
+        isLoading={payloadLoading}
+      />
+      </AnimatedPage>
+    </DataAccessGuard>
+  )
+}
+
+interface AuditLogRowProps {
+  log: AuditLog
+  onViewPayload: () => void
+}
+
+function AuditLogRow({ log, onViewPayload }: AuditLogRowProps) {
+  const eventType = log.event_type ?? log.eventType ?? ""
+  const actor = log.actor_email ?? log.actor ?? "—"
+  const tenant = log.tenant_name ?? log.tenantId ?? "—"
+  const eventId = log.event_id ?? "—"
+  const payloadId = log.payload_id ?? log.payloadRef ?? "—"
+  const description = log.description ?? "—"
+  const retention = log.retention_status ?? "—"
+  const hasPayload = log.raw_payload_present ?? !!log.payloadRef
+
+  const descTruncated = String(description).length > 60
+  const descDisplay = descTruncated ? `${String(description).slice(0, 60)}…` : description
+
+  return (
+    <tr
+      className="border-b border-border transition-colors hover:bg-muted/30"
+      role="row"
+    >
+      <td className="p-3 text-muted-foreground" role="cell">
+        {log.timestamp ? format(new Date(log.timestamp), "PPp") : "—"}
+      </td>
+      <td className="p-3" role="cell">
+        <span className="rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+          {eventType || "—"}
+        </span>
+      </td>
+      <td className="p-3" role="cell">{actor}</td>
+      <td className="p-3" role="cell">{tenant}</td>
+      <td className="p-3 font-mono text-xs" role="cell">{eventId}</td>
+      <td className="p-3 font-mono text-xs" role="cell">{payloadId}</td>
+      <td className="max-w-[200px] p-3" role="cell">
+        <span title={descTruncated ? String(description) : undefined}>
+          {descDisplay}
+        </span>
+      </td>
+      <td className="p-3" role="cell">
+        <span
+          className={cn(
+            "rounded-md px-2 py-0.5 text-xs font-medium",
+            retention === "RETAINED" ? "bg-green-100 text-green-800" : "bg-muted text-muted-foreground"
           )}
-        </DialogContent>
-      </Dialog>
-    </AnimatedPage>
+        >
+          {retention}
+        </span>
+      </td>
+      <td className="p-3" role="cell">
+        {hasPayload ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 gap-1 text-primary hover:bg-primary/10"
+            onClick={onViewPayload}
+            aria-label={`View raw payload for ${log.id}`}
+          >
+            <ExternalLink className="h-4 w-4" />
+            View
+          </Button>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        )}
+      </td>
+    </tr>
   )
 }

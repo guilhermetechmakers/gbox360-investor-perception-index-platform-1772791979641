@@ -19,6 +19,7 @@ import SubscriptionCheckout from "@/pages/SubscriptionCheckout"
 import SubscriptionInvoices from "@/pages/SubscriptionInvoices"
 import AdminDashboard from "@/pages/AdminDashboard"
 import AdminAuditLogs from "@/pages/AdminAuditLogs"
+import AdminDataReplay from "@/pages/AdminDataReplay"
 import AdminUserManagement from "@/pages/AdminUserManagement"
 import NotFound from "@/pages/NotFound"
 
@@ -59,6 +60,7 @@ function App() {
           </Route>
           <Route path="/admin" element={<AdminLayout />}>
             <Route path="audit-logs" element={<AdminAuditLogs />} />
+            <Route path="data-replay" element={<AdminDataReplay />} />
             <Route path="user-management" element={<AdminUserManagement />} />
           </Route>
           <Route path="/404" element={<NotFound />} />

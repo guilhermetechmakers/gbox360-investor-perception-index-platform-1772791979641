@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { adminApi } from "@/api/admin"
-import type { AuditLogsParams, InviteUserInput } from "@/types/admin"
+import type { AuditLogsParams, AuditLogExportParams, InviteUserInput } from "@/types/admin"
 import { safeArray } from "@/lib/data-guard"
 
 export const adminKeys = {
@@ -41,6 +41,27 @@ export function useAdminAuditLogPayload(id: string | null) {
     queryKey: adminKeys.auditLogPayload(id ?? ""),
     queryFn: () => (id ? adminApi.getAuditLogPayload(id) : Promise.resolve(null)),
     enabled: !!id,
+  })
+}
+
+export function useAdminAuditLogExport() {
+  return useMutation({
+    mutationFn: (params: AuditLogExportParams) => adminApi.exportAuditLogs(params),
+    onSuccess: (data) => {
+      if (data?.url) {
+        const a = document.createElement("a")
+        a.href = data.url
+        a.download = `audit-logs-${new Date().toISOString().slice(0, 10)}.csv`
+        a.click()
+        URL.revokeObjectURL(data.url)
+        toast.success("Audit logs exported")
+      } else if (data?.error) {
+        toast.error(data.error)
+      }
+    },
+    onError: (error: Error) => {
+      toast.error(error.message ?? "Export failed")
+    },
   })
 }
 

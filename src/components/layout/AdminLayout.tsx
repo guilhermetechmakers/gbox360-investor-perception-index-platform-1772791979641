@@ -10,6 +10,7 @@ import {
   Menu,
   X,
   Shield,
+  RotateCcw,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { AdminRouteGuard } from "@/components/admin/AdminRouteGuard"
@@ -18,6 +19,7 @@ import { useSignOut } from "@/hooks/useAuth"
 const adminNavItems = [
   { to: "/admin-dashboard", label: "Admin Dashboard", icon: LayoutDashboard },
   { to: "/admin/audit-logs", label: "Audit Logs", icon: FileText },
+  { to: "/admin/data-replay", label: "Data Replay", icon: RotateCcw },
   { to: "/admin/user-management", label: "User Management", icon: Users },
 ]
 
