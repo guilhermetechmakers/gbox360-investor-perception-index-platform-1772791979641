@@ -9,6 +9,12 @@ export interface Speaker {
   inferred_role?: string
 }
 
+/** Why an event was assigned to a topic */
+export interface ClassificationRationale {
+  rule_based?: { topic_id: string; topic_name: string; confidence: number; matched_keywords?: string[] }
+  embedding_proximity?: { narrative_id: string; similarity: number }
+}
+
 /** Canonical NarrativeEvent - immutable append-only schema */
 export interface NarrativeEventCanonical {
   id: string
@@ -28,6 +34,8 @@ export interface NarrativeEventCanonical {
   decay_score: number
   is_persistent: boolean
   raw_payload?: Record<string, unknown>
+  /** Why this event was assigned to a topic (rules / embedding) */
+  classification_rationale?: ClassificationRationale
   /** Legacy / API compatibility */
   source_type?: string
   published_at?: string
@@ -153,12 +161,6 @@ export interface NarrativeEventSummary {
   authority_weight?: number
   credibility_proxy?: number
   classification_rationale?: ClassificationRationale
-}
-
-/** Why an event was assigned to a topic */
-export interface ClassificationRationale {
-  rule_based?: { topic_id: string; topic_name: string; confidence: number; matched_keywords?: string[] }
-  embedding_proximity?: { narrative_id: string; similarity: number }
 }
 
 /** GET /api/narratives response item */

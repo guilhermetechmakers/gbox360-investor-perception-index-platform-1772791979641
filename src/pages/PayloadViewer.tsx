@@ -113,6 +113,22 @@ export default function PayloadViewer() {
               </CardContent>
             </Card>
 
+            {narrative.classification_rationale && (
+              <Card className="rounded-2xl shadow-card">
+                <CardHeader>
+                  <CardTitle>Classification rationale</CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Why this event was assigned to its narrative topic (rules and/or embedding proximity).
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  <pre className="max-h-48 overflow-auto rounded-lg border border-border bg-muted/30 p-4 text-xs">
+                    {JSON.stringify(narrative.classification_rationale, null, 2)}
+                  </pre>
+                </CardContent>
+              </Card>
+            )}
+
             <Card className="rounded-2xl shadow-card">
               <CardHeader>
                 <CardTitle>Raw payload (audit)</CardTitle>
