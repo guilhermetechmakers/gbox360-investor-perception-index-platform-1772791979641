@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { authApi } from "@/api/auth"
 import { toast } from "sonner"
-import { ADMIN_ROLES, type CurrentUser } from "@/types/auth"
+import { ADMIN_ROLES, type CurrentUser, type MFAVerifyInput } from "@/types/auth"
 
 export const authKeys = {
   user: ["auth", "user"] as const,
@@ -68,10 +68,39 @@ export function useSignOut() {
   })
 }
 
+export function useResetPassword() {
+  return useMutation({
+    mutationFn: (email: string) => authApi.resetPassword(email),
+    onSuccess: () => toast.success("Password reset email sent. Check your inbox."),
+    onError: (error: Error) => toast.error(error.message ?? "Failed to send reset email"),
+  })
+}
+
 export function useResendVerification() {
   return useMutation({
     mutationFn: authApi.resendVerification,
     onSuccess: () => toast.success("Verification email sent"),
     onError: (error: Error) => toast.error(error.message ?? "Failed to resend"),
+  })
+}
+
+export function useVerifyMfa() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: MFAVerifyInput) => authApi.verifyMfa(input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: authKeys.user })
+      queryClient.invalidateQueries({ queryKey: authKeys.me })
+      toast.success("MFA verified successfully")
+    },
+    onError: (error: Error) => toast.error(error.message ?? "MFA verification failed"),
+  })
+}
+
+export function useVerifyEmail() {
+  return useMutation({
+    mutationFn: (token: string) => authApi.verifyEmail(token),
+    onSuccess: () => toast.success("Email verified successfully"),
+    onError: (error: Error) => toast.error(error.message ?? "Verification failed"),
   })
 }

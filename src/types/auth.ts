@@ -1,15 +1,27 @@
+export type UserRole = "Analyst" | "IR" | "Admin"
+
 export interface SignInInput {
   email: string
   password: string
+  rememberMe?: boolean
 }
 
 export interface SignUpInput {
   email: string
   password: string
+  companyName: string
+  userRole: UserRole
+  agreeToTOS: boolean
   full_name?: string
   company?: string
   role?: string
   accept_tos?: boolean
+}
+
+/** MFA verification input */
+export interface MFAVerifyInput {
+  code: string
+  sessionId?: string
 }
 
 export interface AuthResponse {
