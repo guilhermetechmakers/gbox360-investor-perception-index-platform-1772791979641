@@ -25,12 +25,25 @@ export function RetentionTable({
   className,
 }: RetentionTableProps) {
   const items = Array.isArray(categories) ? categories : []
+  const captionId = "retention-table-caption"
+  const summaryId = "retention-table-summary"
 
   return (
-    <Card className={cn("overflow-hidden", className)}>
+    <Card
+      className={cn("overflow-hidden rounded-[18px] border-border shadow-card", className)}
+      role="region"
+      aria-labelledby={captionId}
+      aria-describedby={summaryId}
+    >
       <CardContent className="overflow-x-auto p-0">
+        <p id={summaryId} className="sr-only">
+          {summary}
+        </p>
         <Table>
-          <TableCaption className="px-6 py-4 text-left text-sm font-medium text-foreground">
+          <TableCaption
+            id={captionId}
+            className="px-6 py-4 text-left text-sm font-medium text-foreground [caption-side:top]"
+          >
             {caption}
           </TableCaption>
           <TableHeader>
@@ -60,7 +73,6 @@ export function RetentionTable({
             ))}
           </TableBody>
         </Table>
-        <span className="sr-only">{summary}</span>
       </CardContent>
     </Card>
   )

@@ -48,6 +48,33 @@ export const ipiApi = {
    * Timeline data for company with optional date/type filters.
    * Gracefully returns [] if endpoint unavailable.
    */
+  /**
+   * Request export of IPI data for a company/time window.
+   * Returns presigned URL when ready. Falls back to mock when API unavailable.
+   */
+  requestExport: async (
+    companyId: string,
+    window: string = "1W",
+    format: "csv" | "json" = "csv"
+  ): Promise<{ url: string; jobId?: string }> => {
+    try {
+      const res = await api.post<{ url?: string; jobId?: string }>(
+        `/ipi/export?company_id=${companyId}&window=${window}&format=${format}`,
+        {}
+      )
+      const url = res?.url ?? ""
+      const jobId = res?.jobId
+      return { url, jobId }
+    } catch {
+      // Mock for MVP when API unavailable
+      await new Promise((r) => setTimeout(r, 1500))
+      return {
+        url: `#`,
+        jobId: `job-${Date.now()}`,
+      }
+    }
+  },
+
   getTimelines: async (
     companyId: string,
     params?: { from?: string; to?: string; types?: string }

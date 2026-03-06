@@ -32,7 +32,7 @@ export function ContactBlock({
       >
         Contact for Privacy Inquiries
       </h2>
-      <Card className="shadow-card">
+      <Card className="rounded-[18px] border-border shadow-card">
         <CardContent className="p-6">
           <p className="mb-6 text-muted-foreground">
             {notes || "For privacy inquiries, data subject requests, or to report a concern, please contact us."}

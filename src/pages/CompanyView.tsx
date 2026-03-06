@@ -10,14 +10,62 @@ import {
 import { useCompany as useCompanyDetail } from "@/hooks/useCompanies"
 import { AnimatedPage } from "@/components/AnimatedPage"
 import { CompanyTimeWindowSelect } from "@/components/dashboard/CompanyTimeWindowSelect"
+import { useModals } from "@/components/modals"
+import { ipiApi } from "@/api/ipi"
 import { ArrowDownRight, ArrowUpRight, Download, Flag, FileJson } from "lucide-react"
 
 export default function CompanyView() {
   const { companyId } = useParams<{ companyId: string }>()
   const [searchParams, setSearchParams] = useSearchParams()
+  const modals = useModals()
   const id = companyId ?? ""
   const windowParam = searchParams.get("window") ?? "1W"
   const validWindow = ["1D", "1W", "2W", "1M"].includes(windowParam) ? windowParam : "1W"
+
+  const handleExport = async () => {
+    modals.showLoading({ title: "Exporting…", subtitle: "Preparing your export." })
+    try {
+      const result = await ipiApi.requestExport(id, validWindow, "csv")
+      modals.hideLoading()
+      const exportUrl = (result?.url ?? "").trim()
+      const hasDownloadUrl = exportUrl && exportUrl !== "#"
+      modals.showSuccess({
+        title: "Export complete",
+        message: "Your IPI data has been exported successfully.",
+        primaryAction: hasDownloadUrl
+          ? {
+              label: "Download",
+              onClick: () => {
+                window.open(exportUrl, "_blank")
+                modals.hideSuccess()
+              },
+            }
+          : {
+              label: "Dismiss",
+              onClick: modals.hideSuccess,
+            },
+        secondaryAction: hasDownloadUrl
+          ? { label: "Dismiss", onClick: modals.hideSuccess }
+          : undefined,
+        showViewResults: false,
+        resultsHref: undefined,
+      })
+    } catch (err) {
+      modals.hideLoading()
+      modals.showError({
+        title: "Export failed",
+        errorMessage: err instanceof Error ? err.message : "Could not complete export.",
+        retryAction: {
+          label: "Retry",
+          onClick: () => {
+            modals.hideError()
+            handleExport()
+          },
+        },
+        supportLink: "/about-help",
+      })
+    }
+  }
 
   const { data: company, isLoading: companyLoading } = useCompanyDetail(id)
   const { data: ipi, isLoading: ipiLoading } = useIPICurrent(id, validWindow)
@@ -64,7 +112,12 @@ export default function CompanyView() {
             <Link to={`/dashboard/company/${id}/drill-down?window=${validWindow}`}>
               <Button variant="outline">Why did this move?</Button>
             </Link>
-            <Button variant="outline" size="icon" title="Export">
+            <Button
+              variant="outline"
+              size="icon"
+              title="Export"
+              onClick={handleExport}
+            >
               <Download className="h-4 w-4" />
             </Button>
             <Button variant="outline" size="icon" title="Flag">

@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { Toaster } from "sonner"
 import { TooltipProvider } from "@/components/ui/tooltip"
+import { ModalProvider } from "@/components/modals"
 import { DashboardLayout } from "@/components/layout/DashboardLayout"
 import { AdminLayout } from "@/components/layout/AdminLayout"
 import Home from "@/pages/Home"
@@ -43,6 +44,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
+      <ModalProvider>
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Home />} />
@@ -82,6 +84,7 @@ function App() {
         </Routes>
       </BrowserRouter>
       <Toaster richColors position="top-right" />
+      </ModalProvider>
       </TooltipProvider>
     </QueryClientProvider>
   )

@@ -28,6 +28,12 @@ export function Navbar() {
             About & Help
           </Link>
           <Link
+            to="/privacy-policy"
+            className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+          >
+            Privacy
+          </Link>
+          <Link
             to="/terms"
             className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
           >

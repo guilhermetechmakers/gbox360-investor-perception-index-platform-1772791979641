@@ -26,7 +26,7 @@ export function RightsList({
       <ul className="space-y-6" role="list">
         {items.map((right, index) => (
           <li key={right.id ?? right.title ?? index}>
-            <Card className="border-border shadow-card transition-shadow hover:shadow-lg">
+            <Card className="rounded-[18px] border-border shadow-card transition-all duration-300 hover:shadow-[0_8px_28px_rgba(0,0,0,0.12)]">
               <CardContent className="p-6">
                 <h3 className="font-display text-lg font-semibold text-foreground">
                   {right.title ?? ""}

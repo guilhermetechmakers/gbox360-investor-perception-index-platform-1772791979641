@@ -78,7 +78,17 @@ export default function PrivacyPolicy() {
             ))}
 
             {/* Data Retention Table */}
-            <section id="data-retention-table" className="scroll-mt-24 space-y-4">
+            <section
+              id="data-retention-table"
+              className="scroll-mt-24 space-y-4"
+              aria-labelledby="data-retention-heading"
+            >
+              <h2
+                id="data-retention-heading"
+                className="font-display text-2xl font-semibold tracking-tight text-foreground"
+              >
+                Data Retention
+              </h2>
               <RetentionTable
                 caption="Data retention periods by category"
                 summary="Table listing data categories, retention periods, and rationale for each"
