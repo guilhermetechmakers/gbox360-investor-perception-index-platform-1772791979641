@@ -58,6 +58,7 @@ function App() {
           <Route path="/signup" element={<Navigate to="/auth?tab=signup" replace />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/verify-email" element={<VerifyEmail />} />
+          <Route path="/settings" element={<Navigate to="/dashboard/settings" replace />} />
           <Route path="/dashboard" element={<DashboardLayout />}>
             <Route index element={<Dashboard />} />
             <Route path="companies" element={<Companies />} />

@@ -64,20 +64,12 @@
     color: #1f1f1f;
   }
 
-  /* Hide header/nav (Navbar uses print:hidden; this backs up for non-Tailwind) */
-  header[class*="print"],
-  header .print\:hidden,
-  .print\:hidden {
-    display: none !important;
-  }
-
   /* Simplify layout for print */
   .print\:bg-white,
   main {
     background: white !important;
   }
 
-  /* Ensure sufficient contrast and readable font sizes */
   .print\:text-black {
     color: #1f1f1f !important;
   }
@@ -96,13 +88,5 @@
   /* Legal pages: reduce shadow for cleaner print */
   [class*="shadow-card"] {
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-  }
-
-  /* Show link URLs in print for reference */
-  a[href^="http"]::after,
-  a[href^="mailto:"]::after {
-    content: " (" attr(href) ")";
-    font-size: 0.85em;
-    color: #555;
   }
 }

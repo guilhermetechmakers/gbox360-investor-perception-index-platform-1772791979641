@@ -129,12 +129,12 @@ export default function PrivacyPolicy() {
           </div>
 
           {/* Footer */}
-          <footer className="border-t border-border bg-card py-8 print:py-4">
+          <footer className="border-t border-border bg-card py-8 print:py-4 print:border-t" aria-label="Site footer">
             <div className="container flex flex-col items-center justify-between gap-4 px-4 md:flex-row">
-              <span className="text-sm text-muted-foreground">
+              <span className="text-sm text-muted-foreground print:text-foreground">
                 © Gbox360. All rights reserved.
               </span>
-              <div className="flex gap-6 print:hidden">
+              <div className="flex gap-6 print:hidden" aria-hidden="true">
                 <Link
                   to="/privacy-policy"
                   className="text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded"

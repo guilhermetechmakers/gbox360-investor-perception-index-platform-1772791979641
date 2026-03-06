@@ -1,4 +1,5 @@
 export { authApi } from "./auth"
+export { settingsApi } from "./settings"
 export { adminApi } from "./admin"
 export { companiesApi } from "./companies"
 export { dashboardApi } from "./dashboard"
