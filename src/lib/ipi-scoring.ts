@@ -65,7 +65,8 @@ function aggregateNarrativeScore(
   const weighted = list.map((e) => {
     const auth = Number(e.authority_weight) || 0
     const cred = Number(e.credibility_proxy) || 0
-    const decay = Number(e.decay_score) ?? 1
+    const decayRaw = Number(e.decay_score)
+    const decay = typeof decayRaw === "number" && !Number.isNaN(decayRaw) ? decayRaw : 1
     return (auth * 0.5 + cred * 0.5) * decay
   })
 

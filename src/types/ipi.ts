@@ -8,6 +8,35 @@ export interface IPIWeights {
   risk: number
 }
 
+/** Single point in historical IPI timeseries (GET /ipi/historical) */
+export interface IpiHistoricalPoint {
+  timestamp: string
+  totalIpi: number
+  narrativeScore?: number
+  credibilityScore?: number
+  riskScore?: number
+  breakdown?: {
+    narrative: { score: number; contribution: number; explanation: string }
+    credibility: { score: number; contribution: number; explanation: string }
+    risk: { score: number; contribution: number; explanation: string }
+  }
+  weights?: IPIWeights
+}
+
+/** Spec-aligned IPI record for persistence/history */
+export interface IpiRecord {
+  id: string
+  companyId: string
+  windowStart: string
+  windowEnd: string
+  narrativeScore: number
+  credibilityScore: number
+  riskScore: number
+  totalIpi: number
+  weights: IPIWeights
+  computedAt: string
+}
+
 /** Spec-aligned IPI record for Company View / API responses */
 export interface IPIRecord {
   id: string
@@ -32,6 +61,12 @@ export interface IPIScore {
   window_start: string
   window_end: string
   computed_at: string
+  /** Optional breakdown for explainability */
+  breakdown?: {
+    narrative: { score: number; contribution: number; explanation: string }
+    credibility: { score: number; contribution: number; explanation: string }
+    risk: { score: number; contribution: number; explanation: string }
+  }
 }
 
 export interface IPITimeseriesPoint {

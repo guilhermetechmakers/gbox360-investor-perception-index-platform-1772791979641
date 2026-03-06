@@ -3,6 +3,7 @@ import { mockCalculate, mockSandbox } from "@/lib/ipi-mock"
 import type {
   IPIScore,
   IPITimeseriesPoint,
+  IpiHistoricalPoint,
   IPISimulateInput,
   IPICalculateInput,
   IPICalculateResult,
@@ -28,6 +29,31 @@ export const ipiApi = {
     api.get<IPITimeseriesPoint[]>(
       `/ipi/timeseries?company_id=${companyId}&window=${window}`
     ),
+
+  /**
+   * GET /ipi/historical?companyId=&start=&end=
+   * Returns array of IPI points with timestamps for the date range.
+   */
+  getHistorical: async (
+    companyId: string,
+    start: string,
+    end: string
+  ): Promise<IpiHistoricalPoint[]> => {
+    try {
+      const params = new URLSearchParams({
+        companyId: companyId,
+        start: start,
+        end: end,
+      })
+      const data = await api.get<IpiHistoricalPoint[] | { data?: IpiHistoricalPoint[] }>(
+        `/ipi/historical?${params.toString()}`
+      )
+      const list = Array.isArray(data) ? data : (data as { data?: IpiHistoricalPoint[] })?.data
+      return Array.isArray(list) ? list : []
+    } catch {
+      return []
+    }
+  },
 
   getTopNarratives: (
     companyId: string,

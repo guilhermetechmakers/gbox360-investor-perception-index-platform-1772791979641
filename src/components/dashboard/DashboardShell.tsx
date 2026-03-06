@@ -7,6 +7,7 @@ import { DataVisualizationStub } from "./DataVisualizationStub"
 import { DashboardFloatingPromoCard } from "./DashboardFloatingPromoCard"
 import { QuickActionsCard } from "./QuickActionsCard"
 import { RecommendedCompaniesCard } from "./RecommendedCompaniesCard"
+import { IPIScoreCard } from "@/components/ipi"
 import { useDashboard } from "@/hooks/useDashboard"
 import { AnimatedPage } from "@/components/AnimatedPage"
 import { cn } from "@/lib/utils"
@@ -49,6 +50,17 @@ export function DashboardShell({ className }: DashboardShellProps) {
 
       {/* Quick actions */}
       <QuickActionsCard watchedCompanies={watched} />
+
+      {/* IPI Score Card: current IPI for first watched company */}
+      {watched.length > 0 && (
+        <IPIScoreCard
+          companyId={watched[0].id}
+          companyName={watched[0].name}
+          companyTicker={watched[0].ticker}
+          window="1W"
+          showActions
+        />
+      )}
 
       {/* Main grid: Watchlist + IPI Changes + Alerts */}
       <div className="grid gap-6 lg:grid-cols-3">

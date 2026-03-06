@@ -1,5 +1,6 @@
 export { DateRangePicker } from "./DateRangePicker"
 export { IPIBadge } from "./IPIBadge"
 export { IPIBreakdownPanel } from "./IPIBreakdownPanel"
+export { IPIScoreCard } from "./IPIScoreCard"
 export { SandboxModal } from "./SandboxModal"
 export { ExperimentPanel } from "./ExperimentPanel"

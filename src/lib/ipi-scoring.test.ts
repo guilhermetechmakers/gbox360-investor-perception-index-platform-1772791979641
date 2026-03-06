@@ -70,5 +70,44 @@ describe("IPI Scoring Engine", () => {
       const result = computeIPI(mockEvents)
       expect(result.provisionalNotice).toContain("provisional")
     })
+
+    it("returns safe breakdown for single event", () => {
+      const single = [{ authority_weight: 0.8, credibility_proxy: 0.7, decay_score: 1 }]
+      const result = computeIPI(single)
+      expect(result.breakdown.narrative.explanation).toContain("1 events")
+      expect(result.breakdown.credibility.explanation).toContain("1 events")
+      expect(result.breakdown.risk.explanation).toContain("1 sources")
+    })
+
+    it("handles events with missing optional fields", () => {
+      const sparse = [
+        { authority_weight: 0.5, credibility_proxy: 0.6 },
+        { authority_weight: 0.4, credibility_proxy: 0.5, decay_score: 0.8 },
+      ]
+      const result = computeIPI(sparse)
+      expect(result.totalScore).toBeGreaterThanOrEqual(0)
+      expect(result.totalScore).toBeLessThanOrEqual(100)
+      expect(result.weightsUsed.narrative).toBe(0.4)
+      expect(result.weightsUsed.credibility).toBe(0.4)
+      expect(result.weightsUsed.risk).toBe(0.2)
+    })
+
+    it("clamps component scores to 0-100", () => {
+      const high = [
+        { authority_weight: 1, credibility_proxy: 1, decay_score: 1 },
+        { authority_weight: 1, credibility_proxy: 1, decay_score: 1 },
+      ]
+      const result = computeIPI(high)
+      expect(result.narrativeScore).toBeLessThanOrEqual(100)
+      expect(result.credibilityScore).toBeLessThanOrEqual(100)
+      expect(result.riskScore).toBeLessThanOrEqual(100)
+      expect(result.totalScore).toBeLessThanOrEqual(100)
+    })
+
+    it("handles zero weights (falls back to defaults)", () => {
+      const result = computeIPI(mockEvents, { narrative: 0, credibility: 0, risk: 0 })
+      const sum = result.weightsUsed.narrative + result.weightsUsed.credibility + result.weightsUsed.risk
+      expect(sum).toBeCloseTo(1)
+    })
   })
 })

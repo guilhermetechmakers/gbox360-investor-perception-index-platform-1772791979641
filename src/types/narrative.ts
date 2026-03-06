@@ -15,6 +15,27 @@ export interface ClassificationRationale {
   embedding_proximity?: { narrative_id: string; similarity: number }
 }
 
+/** Canonical NarrativeEvent with provenance (immutable, append-only, replay) */
+export interface NarrativeEventProvenance {
+  batchId: string
+  version: string
+  ingestionSource: string
+}
+
+/** Spec-aligned canonical NarrativeEvent for API/storage */
+export interface NarrativeEventCanonicalWithProvenance {
+  id: string
+  source: string
+  platform: string
+  speaker: { entity: string; role: string }
+  audience: string
+  text: string
+  eventTime: string
+  ingestionTime: string
+  provenance: NarrativeEventProvenance
+  createdAt: string
+}
+
 /** Canonical NarrativeEvent - immutable append-only schema (DB/API) */
 export interface NarrativeEventCanonical {
   id: string

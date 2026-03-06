@@ -2,9 +2,62 @@
 
 ## Overview
 
-The IPI (Investor Perception Index) API provides endpoints to calculate and simulate the Investor Perception Index with provisional weights. Weights are: Narrative 40%, Credibility 40%, Risk proxy 20%.
+The IPI (Investor Perception Index) API provides endpoints to get current IPI, historical timeseries, calculate IPI with optional weights, and run sandbox simulations. Provisional weights: Narrative 40%, Credibility 40%, Risk proxy 20%.
 
 ## Endpoints
+
+### GET /ipi/current
+
+Returns current IPI for a company and time window.
+
+**Query params:**
+- `company_id` or `companyId` (required)
+- `window` (optional): `1D`, `1W`, `2W`, `30d`, `90d`, `1M`. Default `1W`.
+- `windowStart`, `windowEnd` (optional): ISO date range instead of preset window.
+
+**Response:**
+```json
+{
+  "company_id": "string",
+  "score": 72.5,
+  "delta": 2.3,
+  "narrative_component": 68.2,
+  "credibility_component": 75.1,
+  "risk_component": 70.0,
+  "weights": { "narrative": 0.4, "credibility": 0.4, "risk": 0.2 },
+  "window_start": "2025-03-01T00:00:00.000Z",
+  "window_end": "2025-03-06T23:59:59.999Z",
+  "computed_at": "2025-03-06T12:00:00.000Z",
+  "breakdown": { ... }
+}
+```
+
+### GET /ipi/timeseries
+
+Returns IPI timeseries points for a company and window.
+
+**Query params:** `company_id` or `companyId`, `window` (same as current).
+
+**Response:** Array of `{ timestamp, score, narrative, credibility, risk }`.
+
+### GET /ipi/historical
+
+Returns historical IPI points for a date range.
+
+**Query params:** `companyId` or `company_id`, `start`, `end` (YYYY-MM-DD or full ISO).
+
+**Response:** Array of:
+```json
+{
+  "timestamp": "2025-03-01T00:00:00.000Z",
+  "totalIpi": 72.5,
+  "narrativeScore": 68.2,
+  "credibilityScore": 75.1,
+  "riskScore": 70.0,
+  "breakdown": { ... },
+  "weights": { "narrative": 0.4, "credibility": 0.4, "risk": 0.2 }
+}
+```
 
 ### POST /ipi/calculate
 

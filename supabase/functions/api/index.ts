@@ -321,6 +321,131 @@ Deno.serve(async (req) => {
       return json({ status: "ok", timestamp: new Date().toISOString() })
     }
 
+    // GET /ipi/current?company_id=&window=1W (or windowStart=&windowEnd=)
+    if (req.method === "GET" && (path === "ipi/current" || (segments[0] === "ipi" && segments[1] === "current"))) {
+      const companyId = url.searchParams.get("company_id") ?? url.searchParams.get("companyId") ?? ""
+      const window = url.searchParams.get("window") ?? "1W"
+      const windowStart = url.searchParams.get("windowStart") ?? url.searchParams.get("window_start") ?? ""
+      const windowEnd = url.searchParams.get("windowEnd") ?? url.searchParams.get("window_end") ?? ""
+      let start: string
+      let end: string
+      if (windowStart && windowEnd) {
+        start = windowStart.slice(0, 10)
+        end = windowEnd.slice(0, 10)
+      } else {
+        const endDate = new Date()
+        const days = window === "1D" ? 1 : window === "2W" ? 14 : window === "30d" ? 30 : window === "90d" ? 90 : window === "1M" ? 30 : 7
+        const startDate = new Date(endDate)
+        startDate.setDate(startDate.getDate() - days)
+        start = startDate.toISOString().slice(0, 10)
+        end = endDate.toISOString().slice(0, 10)
+      }
+      let events: Array<{ authority_weight: number; credibility_proxy: number; decay_score?: number }> = []
+      if (supabase && companyId && start && end) {
+        const rows = await getNarrativesFromDb(supabase, companyId, `${start}T00:00:00.000Z`, `${end}T23:59:59.999Z`)
+        events = rows.map((e) => ({ authority_weight: e.authority_weight, credibility_proxy: e.credibility_proxy, decay_score: e.decay_score }))
+      }
+      if (events.length === 0) events = mockEvents(companyId || "default")
+      const result = computeIPI(events, DEFAULT_IPI_WEIGHTS)
+      const prevStart = new Date(start)
+      prevStart.setDate(prevStart.getDate() - 7)
+      const prevEnd = start
+      let prevScore = result.totalScore
+      if (supabase && companyId) {
+        const prevRows = await getNarrativesFromDb(supabase, companyId, `${prevStart.toISOString().slice(0, 10)}T00:00:00.000Z`, `${prevEnd}T23:59:59.999Z`)
+        const prevEvents = prevRows.map((e) => ({ authority_weight: e.authority_weight, credibility_proxy: e.credibility_proxy, decay_score: e.decay_score }))
+        if (prevEvents.length > 0) {
+          const prevResult = computeIPI(prevEvents, DEFAULT_IPI_WEIGHTS)
+          prevScore = prevResult.totalScore
+        }
+      }
+      const delta = Math.round((result.totalScore - prevScore) * 10) / 10
+      return json({
+        company_id: companyId,
+        score: result.totalScore,
+        delta,
+        narrative_component: result.narrativeScore,
+        credibility_component: result.credibilityScore,
+        risk_component: result.riskScore,
+        weights: result.weightsUsed,
+        window_start: `${start}T00:00:00.000Z`,
+        window_end: `${end}T23:59:59.999Z`,
+        computed_at: new Date().toISOString(),
+        breakdown: result.breakdown,
+      })
+    }
+
+    // GET /ipi/timeseries?company_id=&window=
+    if (req.method === "GET" && (path === "ipi/timeseries" || (segments[0] === "ipi" && segments[1] === "timeseries"))) {
+      const companyId = url.searchParams.get("company_id") ?? url.searchParams.get("companyId") ?? ""
+      const window = url.searchParams.get("window") ?? "1W"
+      const endDate = new Date()
+      const days = window === "1D" ? 1 : window === "2W" ? 14 : window === "30d" ? 30 : window === "90d" ? 90 : window === "1M" ? 30 : 7
+      const startDate = new Date(endDate)
+      startDate.setDate(startDate.getDate() - days)
+      const start = startDate.toISOString().slice(0, 10)
+      const end = endDate.toISOString().slice(0, 10)
+      const points: Array<{ timestamp: string; score: number; narrative: number; credibility: number; risk: number }> = []
+      if (supabase && companyId) {
+        for (let d = new Date(start); d <= endDate; d.setDate(d.getDate() + 1)) {
+          const dayStart = d.toISOString().slice(0, 10) + "T00:00:00.000Z"
+          const dayEnd = d.toISOString().slice(0, 10) + "T23:59:59.999Z"
+          const rows = await getNarrativesFromDb(supabase, companyId, dayStart, dayEnd)
+          const events = rows.map((e) => ({ authority_weight: e.authority_weight, credibility_proxy: e.credibility_proxy, decay_score: e.decay_score }))
+          const r = computeIPI(events.length ? events : mockEvents(companyId), DEFAULT_IPI_WEIGHTS)
+          points.push({ timestamp: dayStart, score: r.totalScore, narrative: r.narrativeScore, credibility: r.credibilityScore, risk: r.riskScore })
+        }
+      }
+      if (points.length === 0) {
+        const r = computeIPI(mockEvents(companyId || "default"), DEFAULT_IPI_WEIGHTS)
+        points.push({ timestamp: `${start}T00:00:00.000Z`, score: r.totalScore, narrative: r.narrativeScore, credibility: r.credibilityScore, risk: r.riskScore })
+      }
+      return json(points)
+    }
+
+    // GET /ipi/historical?companyId=&start=&end=
+    if (req.method === "GET" && (path === "ipi/historical" || (segments[0] === "ipi" && segments[1] === "historical"))) {
+      const companyId = url.searchParams.get("companyId") ?? url.searchParams.get("company_id") ?? ""
+      const startParam = url.searchParams.get("start") ?? ""
+      const endParam = url.searchParams.get("end") ?? ""
+      const start = startParam.slice(0, 10)
+      const end = endParam.slice(0, 10)
+      const points: Array<{ timestamp: string; totalIpi: number; narrativeScore?: number; credibilityScore?: number; riskScore?: number; breakdown?: unknown; weights?: Record<string, number> }> = []
+      if (supabase && companyId && start && end) {
+        const startDate = new Date(start)
+        const endDate = new Date(end)
+        for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+          const dayStart = d.toISOString().slice(0, 10) + "T00:00:00.000Z"
+          const dayEnd = d.toISOString().slice(0, 10) + "T23:59:59.999Z"
+          const rows = await getNarrativesFromDb(supabase, companyId, dayStart, dayEnd)
+          const events = rows.map((e) => ({ authority_weight: e.authority_weight, credibility_proxy: e.credibility_proxy, decay_score: e.decay_score }))
+          const r = computeIPI(events.length ? events : [], DEFAULT_IPI_WEIGHTS)
+          points.push({
+            timestamp: dayStart,
+            totalIpi: r.totalScore,
+            narrativeScore: r.narrativeScore,
+            credibilityScore: r.credibilityScore,
+            riskScore: r.riskScore,
+            breakdown: r.breakdown,
+            weights: r.weightsUsed,
+          })
+        }
+      }
+      if (points.length === 0 && companyId) {
+        const r = computeIPI(mockEvents(companyId), DEFAULT_IPI_WEIGHTS)
+        points.push({
+          timestamp: `${start}T00:00:00.000Z`,
+          totalIpi: r.totalScore,
+          narrativeScore: r.narrativeScore,
+          credibilityScore: r.credibilityScore,
+          riskScore: r.riskScore,
+          breakdown: undefined,
+          weights: r.weightsUsed,
+        })
+      }
+      return json(points)
+    }
+
     // POST /ingestEvent
     if (req.method === "POST" && (path === "ingestEvent" || segments[0] === "ingestEvent")) {
       const body = await req.json().catch(() => ({})) as {

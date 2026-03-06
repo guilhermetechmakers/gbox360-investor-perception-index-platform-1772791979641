@@ -8,6 +8,8 @@ export const ipiKeys = {
     ["ipi", "current", companyId, window] as const,
   timeseries: (companyId: string, window: string) =>
     ["ipi", "timeseries", companyId, window] as const,
+  historical: (companyId: string, start: string, end: string) =>
+    ["ipi", "historical", companyId, start, end] as const,
   narratives: (companyId: string, window: string, top?: number) =>
     ["ipi", "narratives", companyId, window, top] as const,
   events: (companyId: string, window: string) =>
@@ -30,6 +32,21 @@ export function useIPITimeseries(companyId: string, window: string = "1W") {
     queryKey: ipiKeys.timeseries(companyId, window),
     queryFn: () => ipiApi.getTimeseries(companyId, window),
     enabled: !!companyId,
+  })
+}
+
+/** GET /ipi/historical?companyId=&start=&end= — historical IPI timeseries */
+export function useIPIHistorical(
+  companyId: string,
+  start: string,
+  end: string,
+  enabled = true
+) {
+  return useQuery({
+    queryKey: ipiKeys.historical(companyId, start, end),
+    queryFn: () => ipiApi.getHistorical(companyId, start, end),
+    enabled: !!companyId && !!start && !!end && enabled,
+    staleTime: 1000 * 60 * 2,
   })
 }
 

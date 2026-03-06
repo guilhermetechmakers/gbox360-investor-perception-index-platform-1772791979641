@@ -12,6 +12,8 @@ export interface IPIBadgeProps {
   maxScore?: number
   size?: "sm" | "md" | "lg"
   showDelta?: boolean
+  /** Show "Provisional weights" badge next to score */
+  showProvisionalBadge?: boolean
   className?: string
 }
 
@@ -21,6 +23,7 @@ export function IPIBadge({
   maxScore = 100,
   size = "md",
   showDelta = true,
+  showProvisionalBadge = false,
   className,
 }: IPIBadgeProps) {
   const normalizedScore = Math.min(maxScore, Math.max(0, Number(score)))
@@ -59,6 +62,14 @@ export function IPIBadge({
         {normalizedScore.toFixed(1)}
       </span>
       <span className="text-muted-foreground">/ {maxScore}</span>
+      {showProvisionalBadge && (
+        <span
+          className="rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary"
+          title="Weights are provisional"
+        >
+          Provisional
+        </span>
+      )}
       {showDelta && (
         <span className={cn("flex items-center gap-0.5 text-lg", deltaColorClass)}>
           <DeltaIcon className="h-5 w-5" aria-hidden />
