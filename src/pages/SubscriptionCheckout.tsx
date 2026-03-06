@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { Link } from "react-router-dom"
 import { AnimatedPage } from "@/components/AnimatedPage"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -95,6 +95,12 @@ export default function SubscriptionCheckout() {
   const planList = safeArray(plans)
   const selectedPlan = planList.find((p) => p.id === selectedPlanId) ?? planList[0] ?? null
 
+  useEffect(() => {
+    if (planList.length > 0 && selectedPlanId == null) {
+      setSelectedPlanId(planList[0].id)
+    }
+  }, [planList.length, selectedPlanId])
+
   const getBasePrice = useCallback(
     (plan: Plan) => {
       if (billingPeriod === "annual") {
@@ -150,8 +156,10 @@ export default function SubscriptionCheckout() {
     const errs: Partial<Record<keyof BillingDetails, string>> = {}
     if (!isNotEmpty(billingDetails.contactName)) errs.contactName = "Contact name is required"
     if (!isValidEmail(billingDetails.email)) errs.email = "Valid email is required"
-    if (!isValidVAT(billingDetails.taxId)) errs.taxId = "Invalid VAT format"
+    if (billingDetails.taxId != null && billingDetails.taxId.trim() !== "" && !isValidVAT(billingDetails.taxId))
+      errs.taxId = "Invalid VAT format"
     setBillingErrors(errs)
+    if (Object.keys(errs).length > 0) return false
 
     if (enterpriseInvoiceEnabled) {
       const invErrs: Partial<Record<keyof InvoiceDetails, string>> = {}
@@ -171,7 +179,7 @@ export default function SubscriptionCheckout() {
       if (Object.keys(cardErrs).length > 0) return false
     }
 
-    return Object.keys(errs).length === 0
+    return true
   }, [billingDetails, invoiceDetails, cardFields, enterpriseInvoiceEnabled])
 
   const handleSubmit = useCallback(() => {
@@ -262,7 +270,7 @@ export default function SubscriptionCheckout() {
   return (
     <AnimatedPage>
       <div className="mx-auto max-w-4xl space-y-8">
-        <div>
+        <div className="rounded-[1.25rem] bg-hero-bg px-6 py-10 md:px-10 md:py-12">
           <Link
             to="/dashboard/subscription-management"
             className="mb-4 inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
@@ -270,10 +278,10 @@ export default function SubscriptionCheckout() {
             <ArrowLeft className="h-4 w-4" />
             Back to subscription
           </Link>
-          <h1 className="font-display text-3xl font-bold tracking-tight">
+          <h1 className="font-display text-4xl font-bold tracking-tight text-foreground md:text-5xl">
             Checkout
           </h1>
-          <p className="mt-2 text-muted-foreground">
+          <p className="mt-3 max-w-2xl text-lg text-muted-foreground">
             Subscribe or upgrade your plan. Secure payment with card or enterprise invoicing.
           </p>
         </div>

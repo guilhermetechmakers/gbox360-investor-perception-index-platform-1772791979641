@@ -38,7 +38,7 @@ export function DashboardLayout() {
 
   const handleSignOut = () => {
     signOut.mutate(undefined, {
-      onSuccess: () => navigate("/login"),
+      onSuccess: () => navigate("/auth"),
     })
   }
 

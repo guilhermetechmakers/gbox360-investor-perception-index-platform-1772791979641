@@ -25,8 +25,11 @@ export interface MFAVerifyInput {
 }
 
 export interface AuthResponse {
-  user: { id: string; email: string; full_name?: string; role?: string }
-  token: string
+  user?: { id: string; email: string; full_name?: string; role?: string }
+  token?: string
+  /** When true, client must complete MFA verification before session is granted */
+  mfa_required?: boolean
+  session_id?: string
 }
 
 /** Roles that can access admin sections */

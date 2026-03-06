@@ -20,12 +20,12 @@ export default function Home() {
               Narrative-driven IPI for public companies. Auditable raw payloads, authority & credibility weighting, and replayable pipelines for institutional investors and IR teams.
             </p>
             <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
-              <Link to="/signup">
+              <Link to="/auth?tab=signup">
                 <Button size="lg" className="text-base">
                   Get started
                 </Button>
               </Link>
-              <Link to="/login">
+              <Link to="/auth?tab=login">
                 <Button size="lg" variant="outline" className="text-base">
                   Log in
                 </Button>
@@ -101,7 +101,7 @@ export default function Home() {
             <p className="mt-2 text-muted-foreground">
               Start your trial or request a demo for your team.
             </p>
-            <Link to="/signup">
+            <Link to="/auth?tab=signup">
               <Button size="lg" className="mt-6">
                 Start free trial
               </Button>

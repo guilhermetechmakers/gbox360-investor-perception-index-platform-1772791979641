@@ -17,9 +17,19 @@ async function apiRequest<T>(
   if (!res.ok) {
     if (res.status === 401) {
       localStorage.removeItem("auth_token")
-      window.location.href = "/login"
+      window.location.href = "/auth"
     }
-    throw new Error(`API Error: ${res.status}`)
+    let message = `API Error: ${res.status}`
+    try {
+      const text = await res.text()
+      const body = text ? JSON.parse(text) : null
+      const msg = body?.message ?? body?.error ?? body?.msg
+      if (typeof msg === "string" && msg.trim()) message = msg
+      else if (typeof text === "string" && text.trim()) message = text.slice(0, 200)
+    } catch {
+      /* use default message */
+    }
+    throw new Error(message)
   }
   return res.json()
 }

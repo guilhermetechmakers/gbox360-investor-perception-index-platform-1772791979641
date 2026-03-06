@@ -17,7 +17,7 @@ export function AdminRouteGuard({ children }: AdminRouteGuardProps) {
   const hasToken = typeof window !== "undefined" && !!localStorage.getItem("auth_token")
 
   if (!hasToken) {
-    return <Navigate to="/login" state={{ from: location }} replace />
+    return <Navigate to="/auth" state={{ from: location }} replace />
   }
 
   if (isLoading) {

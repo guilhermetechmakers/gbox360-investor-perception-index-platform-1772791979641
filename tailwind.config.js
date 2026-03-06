@@ -32,6 +32,8 @@ export default {
           DEFAULT: 'rgb(var(--muted))',
           foreground: 'rgb(var(--muted-foreground))',
         },
+        'page-bg': 'rgb(var(--page-bg))',
+        'hero-bg': 'rgb(var(--hero-bg))',
       },
       fontFamily: {
         sans: ['Inter', 'sans-serif'],

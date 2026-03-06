@@ -8,7 +8,10 @@ import {
   InvoicesPanel,
 } from "@/components/subscription"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Button } from "@/components/ui/button"
 import { useSubscription } from "@/hooks/useSubscription"
+import { Link } from "react-router-dom"
+import { ArrowRight, FileText } from "lucide-react"
 
 export default function SubscriptionManagement() {
   const { data, isLoading } = useSubscription()
@@ -19,11 +22,20 @@ export default function SubscriptionManagement() {
   return (
     <AnimatedPage>
       <div className="mx-auto max-w-4xl space-y-8">
-        <div>
-          <h1 className="font-display text-2xl font-semibold">Subscription Management</h1>
-          <p className="text-muted-foreground">
-            Manage your plan, billing, payment methods, and team seats.
-          </p>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="font-display text-2xl font-semibold">Subscription Management</h1>
+            <p className="text-muted-foreground">
+              Manage your plan, billing, payment methods, and team seats.
+            </p>
+          </div>
+          <Button variant="outline" size="sm" asChild className="shrink-0">
+            <Link to="/dashboard/subscription-management/invoices" className="gap-2">
+              <FileText className="h-4 w-4" />
+              Transaction history
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </Button>
         </div>
 
         <SubscriptionHeaderCard

@@ -21,10 +21,10 @@ export function Navbar() {
           >
             Features
           </Link>
-          <Link to="/login">
+          <Link to="/auth?tab=login">
             <Button variant="ghost">Log in</Button>
           </Link>
-          <Link to="/signup">
+          <Link to="/auth?tab=signup">
             <Button>Get started</Button>
           </Link>
         </nav>

@@ -5,8 +5,8 @@ import { TooltipProvider } from "@/components/ui/tooltip"
 import { DashboardLayout } from "@/components/layout/DashboardLayout"
 import { AdminLayout } from "@/components/layout/AdminLayout"
 import Home from "@/pages/Home"
-import Login from "@/pages/Login"
-import Signup from "@/pages/Signup"
+import UnifiedAuthPage from "@/pages/UnifiedAuthPage"
+import ForgotPasswordPage from "@/pages/ForgotPassword"
 import VerifyEmail from "@/pages/VerifyEmail"
 import Dashboard from "@/pages/Dashboard"
 import Companies from "@/pages/Companies"
@@ -42,8 +42,10 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
+          <Route path="/auth" element={<UnifiedAuthPage />} />
+          <Route path="/login" element={<Navigate to="/auth?tab=login" replace />} />
+          <Route path="/signup" element={<Navigate to="/auth?tab=signup" replace />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/verify-email" element={<VerifyEmail />} />
           <Route path="/dashboard" element={<DashboardLayout />}>
             <Route index element={<Dashboard />} />
