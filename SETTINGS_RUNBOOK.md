@@ -5,9 +5,26 @@ This runbook describes how to test each Settings panel, simulate admin vs. non-a
 ## Routes
 
 - **Primary:** `/dashboard/settings` (authenticated, inside dashboard layout)
+- **User Profile:** `/dashboard/profile` (authenticated, full profile hub)
 - **Redirect:** `/settings` → redirects to `/dashboard/settings`
 
 Ensure the user is logged in; otherwise they are redirected to `/auth`.
+
+---
+
+## User Profile Page (`/dashboard/profile`)
+
+**What to test:**
+
+- **Profile header:** Avatar, name, email, organization, role. Click **Edit** → inline edit for name and organization. **Save** (check) or **Cancel** (X).
+- **Profile details form:** Name, email (read-only), phone, organization, timezone, locale, notification preferences. Save → `PATCH /api/users/me`.
+- **Activity log:** List of recent actions with timestamps. Click an item with metadata to expand and view event details.
+- **CSV export (admin only):** **Export CSV** button visible when `isAdmin === true`. Click → `POST /api/users/me/activity/export`; file download.
+- **Team management (admin only):** AdminUserManagementPanel (tenant users list) visible when admin. Invite, change role, remove.
+- **Security section:** Change password link to `/forgot-password`; Two-factor (coming soon).
+- **SSO badge:** When `is_sso_enabled`, SSO badge shown in header.
+
+**Data:** `GET /api/users/me`, `GET /api/users/me/activity`. Profile updates via `PATCH /api/users/me`.
 
 ---
 

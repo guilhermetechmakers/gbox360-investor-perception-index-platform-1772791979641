@@ -15,6 +15,7 @@ import CompanyView from "@/pages/CompanyView"
 import DrillDown from "@/pages/DrillDown"
 import PayloadViewer from "@/pages/PayloadViewer"
 import Settings from "@/pages/Settings"
+import UserProfile from "@/pages/UserProfile"
 import Analytics from "@/pages/Analytics"
 import SubscriptionManagement from "@/pages/SubscriptionManagement"
 import SubscriptionCheckout from "@/pages/SubscriptionCheckout"
@@ -65,6 +66,7 @@ function App() {
             <Route path="company/:companyId" element={<CompanyView />} />
             <Route path="company/:companyId/drill-down" element={<DrillDown />} />
             <Route path="payload/:eventId" element={<PayloadViewer />} />
+            <Route path="profile" element={<UserProfile />} />
             <Route path="settings" element={<Settings />} />
             <Route path="analytics" element={<Analytics />} />
             <Route path="subscription-management" element={<SubscriptionManagement />} />

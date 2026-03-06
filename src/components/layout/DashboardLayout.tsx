@@ -13,6 +13,7 @@ import {
   X,
   CreditCard,
   Shield,
+  User,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useSignOut } from "@/hooks/useAuth"
@@ -24,6 +25,7 @@ const navItems = [
   { to: "/dashboard/companies", label: "Companies", icon: Building2 },
   { to: "/dashboard/analytics", label: "Analytics", icon: BarChart3 },
   { to: "/dashboard/subscription-management", label: "Subscription", icon: CreditCard },
+  { to: "/dashboard/profile", label: "Profile", icon: User },
   { to: "/dashboard/settings", label: "Settings", icon: Settings },
 ]
 
@@ -185,11 +187,13 @@ export function DashboardLayout() {
           <div className="sticky top-14 z-20 flex h-14 items-center justify-between gap-4 border-b border-border bg-card px-4 md:top-0 md:px-6">
             <QuickCompanySelector placeholder="Search companies..." className="max-w-[280px]" />
             <div className="flex items-center gap-2">
-              <Avatar className="h-8 w-8">
-                <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                  {user?.email?.slice(0, 2).toUpperCase() ?? "U"}
-                </AvatarFallback>
-              </Avatar>
+              <Link to="/dashboard/profile">
+                <Avatar className="h-8 w-8 transition-transform hover:scale-105">
+                  <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                    {user?.email?.slice(0, 2).toUpperCase() ?? "U"}
+                  </AvatarFallback>
+                </Avatar>
+              </Link>
             </div>
           </div>
         )}

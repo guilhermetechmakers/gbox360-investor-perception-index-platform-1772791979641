@@ -80,7 +80,10 @@ export function UserProfilePanel() {
           Profile
         </CardTitle>
         <CardDescription>
-          Update your personal details, timezone, and language preferences.
+          Update your personal details, timezone, and language preferences.{" "}
+          <Link to="/dashboard/profile" className="text-primary hover:underline">
+            View full profile
+          </Link>
         </CardDescription>
       </CardHeader>
       <CardContent>
