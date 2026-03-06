@@ -13,6 +13,9 @@ import DrillDown from "@/pages/DrillDown"
 import PayloadViewer from "@/pages/PayloadViewer"
 import Settings from "@/pages/Settings"
 import Analytics from "@/pages/Analytics"
+import SubscriptionManagement from "@/pages/SubscriptionManagement"
+import SubscriptionCheckout from "@/pages/SubscriptionCheckout"
+import SubscriptionInvoices from "@/pages/SubscriptionInvoices"
 import NotFound from "@/pages/NotFound"
 
 const queryClient = new QueryClient({
@@ -43,6 +46,9 @@ function App() {
             <Route path="payload/:eventId" element={<PayloadViewer />} />
             <Route path="settings" element={<Settings />} />
             <Route path="analytics" element={<Analytics />} />
+            <Route path="subscription-management" element={<SubscriptionManagement />} />
+            <Route path="subscription-management/checkout" element={<SubscriptionCheckout />} />
+            <Route path="subscription-management/invoices" element={<SubscriptionInvoices />} />
           </Route>
           <Route path="/404" element={<NotFound />} />
           <Route path="*" element={<Navigate to="/404" replace />} />

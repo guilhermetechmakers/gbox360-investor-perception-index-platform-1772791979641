@@ -10,6 +10,7 @@ import {
   LogOut,
   Menu,
   X,
+  CreditCard,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useSignOut } from "@/hooks/useAuth"
@@ -18,6 +19,7 @@ const navItems = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/dashboard/companies", label: "Companies", icon: Building2 },
   { to: "/dashboard/analytics", label: "Analytics", icon: BarChart3 },
+  { to: "/dashboard/subscription-management", label: "Subscription", icon: CreditCard },
   { to: "/dashboard/settings", label: "Settings", icon: Settings },
 ]
 
