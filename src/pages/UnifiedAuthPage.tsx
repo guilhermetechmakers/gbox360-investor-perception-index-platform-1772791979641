@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react"
-import { Link, useNavigate, useSearchParams } from "react-router-dom"
+import { Link, useNavigate, useSearchParams, useLocation } from "react-router-dom"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -21,6 +21,7 @@ import { AnimatedPage } from "@/components/AnimatedPage"
 import { MFAPromptModal } from "@/components/auth/MFAPromptModal"
 import { SSOLoginButton } from "@/components/auth/SSOLoginButton"
 import { InlineErrorBox } from "@/components/auth/InlineErrorBox"
+import { PasswordStrengthMeter } from "@/components/auth"
 import { AcceptTermsInline } from "@/components/terms-of-service"
 import type { SignInInput, SignUpInput, UserRole } from "@/types/auth"
 import { TERMS_VERSION } from "@/content/terms-of-service"
@@ -38,8 +39,10 @@ const signupSchema = z.object({
   password: z
     .string()
     .min(8, "Password must be at least 8 characters")
-    .regex(/[A-Za-z]/, "Password must contain at least one letter")
-    .regex(/[0-9]/, "Password must contain at least one number"),
+    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+    .regex(/[a-z]/, "Password must contain at least one lowercase letter")
+    .regex(/[0-9]/, "Password must contain at least one number")
+    .regex(/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]/, "Password must contain at least one symbol"),
   userRole: z.enum(["Analyst", "IR", "Admin"] as const),
   agreeToTOS: z.boolean().refine((v) => v === true, "You must accept the Terms of Service"),
 })
@@ -180,6 +183,7 @@ function SignupForm({
   })
   const userRole = watch("userRole")
   const agreeToTOS = watch("agreeToTOS")
+  const password = watch("password", "")
 
   const roles: UserRole[] = ["Analyst", "IR", "Admin"]
 
@@ -222,9 +226,12 @@ function SignupForm({
           id="signup-password"
           type="password"
           autoComplete="new-password"
-          placeholder="At least 8 characters, one letter and one number"
+          placeholder="8+ chars, uppercase, lowercase, number, symbol"
           {...register("password")}
+          className="rounded-lg focus-visible:ring-ring"
+          aria-invalid={!!errors.password}
         />
+        <PasswordStrengthMeter password={password} showRules />
         {errors.password && (
           <p className="text-sm text-red-600" role="alert">
             {errors.password.message}
@@ -276,6 +283,8 @@ function SignupForm({
 export default function UnifiedAuthPage() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
+  const location = useLocation()
+  const from = (location.state as { from?: { pathname?: string } })?.from?.pathname
   const tabParam = searchParams.get("tab") ?? "login"
   const initialTab = tabParam === "signup" ? "signup" : "login"
   const [activeTab, setActiveTab] = useState<"login" | "signup">(initialTab)
@@ -292,8 +301,8 @@ export default function UnifiedAuthPage() {
   const handleLoginSuccess = useCallback(() => {
     setShowMfaPrompt(false)
     setServerError("")
-    navigate("/dashboard")
-  }, [navigate])
+    navigate(from && from !== "/auth" ? from : "/dashboard", { replace: true })
+  }, [navigate, from])
 
   const handleLoginSubmit = (data: LoginFormData) => {
     setServerError("")

@@ -42,6 +42,14 @@ export interface CurrentUser {
   email: string
   full_name?: string
   role?: string
+  mfa_enabled?: boolean
+}
+
+/** MFA setup response with secret and provisioning URI for authenticator app */
+export interface MFASetupResponse {
+  secret?: string
+  provisioning_uri?: string
+  qr_code_url?: string
 }
 
 /** Verification status from polling API */

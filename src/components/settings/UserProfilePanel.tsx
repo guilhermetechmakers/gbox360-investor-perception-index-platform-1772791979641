@@ -205,9 +205,11 @@ export function UserProfilePanel() {
                   Change password
                 </Link>
               </Button>
-              <Button variant="outline" size="sm" disabled className="gap-2" aria-label="Two-factor authentication (coming soon)">
-                <Shield className="h-4 w-4" />
-                Two-factor (coming soon)
+              <Button variant="outline" size="sm" asChild className="gap-2" aria-label="Two-factor authentication settings">
+                <Link to="/dashboard/settings?tab=mfa" className="flex items-center gap-2">
+                  <Shield className="h-4 w-4" />
+                  Two-factor authentication
+                </Link>
               </Button>
             </div>
           </div>

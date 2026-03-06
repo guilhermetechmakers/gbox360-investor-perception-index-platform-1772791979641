@@ -70,9 +70,18 @@ export function useSignOut() {
 
 export function useResetPassword() {
   return useMutation({
-    mutationFn: (email: string) => authApi.resetPassword(email),
+    mutationFn: (email: string) => authApi.passwordResetRequest(email),
     onSuccess: () => toast.success("Password reset email sent. Check your inbox."),
     onError: (error: Error) => toast.error(error.message ?? "Failed to send reset email"),
+  })
+}
+
+export function useResetPasswordSet() {
+  return useMutation({
+    mutationFn: ({ token, newPassword }: { token: string; newPassword: string }) =>
+      authApi.passwordReset(token, newPassword),
+    onSuccess: () => toast.success("Password reset successfully. You can now log in."),
+    onError: (error: Error) => toast.error(error.message ?? "Failed to reset password"),
   })
 }
 
@@ -121,5 +130,36 @@ export function useVerifyEmail() {
     mutationFn: (token: string) => authApi.verifyEmail(token),
     onSuccess: () => toast.success("Email verified successfully"),
     onError: (error: Error) => toast.error(error.message ?? "Verification failed"),
+  })
+}
+
+export function useMfaSetup() {
+  return useMutation({
+    mutationFn: () => authApi.mfaSetup(),
+    onError: (error: Error) => toast.error(error.message ?? "MFA setup failed"),
+  })
+}
+
+export function useMfaVerifyEnroll() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (code: string) => authApi.mfaVerifyEnroll(code),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: authKeys.me })
+      toast.success("Two-factor authentication enabled")
+    },
+    onError: (error: Error) => toast.error(error.message ?? "MFA verification failed"),
+  })
+}
+
+export function useMfaDisable() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (code: string) => authApi.mfaDisable(code),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: authKeys.me })
+      toast.success("Two-factor authentication disabled")
+    },
+    onError: (error: Error) => toast.error(error.message ?? "Failed to disable MFA"),
   })
 }

@@ -3,11 +3,13 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { Toaster } from "sonner"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { ModalProvider } from "@/components/modals"
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute"
 import { DashboardLayout } from "@/components/layout/DashboardLayout"
 import { AdminLayout } from "@/components/layout/AdminLayout"
 import Home from "@/pages/Home"
 import UnifiedAuthPage from "@/pages/UnifiedAuthPage"
 import ForgotPasswordPage from "@/pages/ForgotPassword"
+import ResetPassword from "@/pages/ResetPassword"
 import VerifyEmail from "@/pages/VerifyEmail"
 import Dashboard from "@/pages/Dashboard"
 import Companies from "@/pages/Companies"
@@ -58,9 +60,10 @@ function App() {
           <Route path="/login" element={<Navigate to="/auth?tab=login" replace />} />
           <Route path="/signup" element={<Navigate to="/auth?tab=signup" replace />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/verify-email" element={<VerifyEmail />} />
           <Route path="/settings" element={<Navigate to="/dashboard/settings" replace />} />
-          <Route path="/dashboard" element={<DashboardLayout />}>
+          <Route path="/dashboard" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
             <Route index element={<Dashboard />} />
             <Route path="companies" element={<Companies />} />
             <Route path="company/:companyId" element={<CompanyView />} />

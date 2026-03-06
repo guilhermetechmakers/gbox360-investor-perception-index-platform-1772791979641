@@ -1,3 +1,4 @@
+import { useSearchParams } from "react-router-dom"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { UserProfilePanel } from "./UserProfilePanel"
 import { NotificationsPanel } from "./NotificationsPanel"
@@ -6,14 +7,28 @@ import { DataRefreshPanel } from "./DataRefreshPanel"
 import { TeamManagementPanel } from "./TeamManagementPanel"
 import { SecuritySessionsPanel } from "./SecuritySessionsPanel"
 import { AuditAndPayloadPanel } from "./AuditAndPayloadPanel"
+import { MFAPanel } from "./MFAPanel"
 import { useCurrentUser } from "@/hooks/useAuth"
-import { User, Bell, Key, RefreshCw, Users, Shield, FileText } from "lucide-react"
+import { User, Bell, Key, RefreshCw, Users, Shield, FileText, ShieldCheck } from "lucide-react"
+
+const VALID_TABS = ["profile", "notifications", "api-keys", "data-refresh", "team", "mfa", "sessions", "audit"] as const
 
 export function UnifiedSettingsEditor() {
   const { isAdmin } = useCurrentUser()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const tabParam = searchParams.get("tab") ?? "profile"
+  const activeTab = VALID_TABS.includes(tabParam as (typeof VALID_TABS)[number]) ? tabParam : "profile"
+
+  const handleTabChange = (value: string) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev)
+      next.set("tab", value)
+      return next
+    })
+  }
 
   return (
-    <Tabs defaultValue="profile" className="w-full">
+    <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
       <TabsList className="mb-6 flex h-auto flex-wrap gap-2 bg-muted/50 p-2">
         <TabsTrigger value="profile" className="gap-2">
           <User className="h-4 w-4" />
@@ -37,6 +52,10 @@ export function UnifiedSettingsEditor() {
             Team
           </TabsTrigger>
         )}
+        <TabsTrigger value="mfa" className="gap-2">
+          <ShieldCheck className="h-4 w-4" />
+          Two-factor
+        </TabsTrigger>
         <TabsTrigger value="sessions" className="gap-2">
           <Shield className="h-4 w-4" />
           Sessions
@@ -64,6 +83,9 @@ export function UnifiedSettingsEditor() {
           <TeamManagementPanel />
         </TabsContent>
       )}
+      <TabsContent value="mfa" className="mt-0">
+        <MFAPanel />
+      </TabsContent>
       <TabsContent value="sessions" className="mt-0">
         <SecuritySessionsPanel />
       </TabsContent>

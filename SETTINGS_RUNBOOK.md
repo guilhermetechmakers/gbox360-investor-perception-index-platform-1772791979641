@@ -7,6 +7,8 @@ This runbook describes how to test each Settings panel, simulate admin vs. non-a
 - **Primary:** `/dashboard/settings` (authenticated, inside dashboard layout)
 - **User Profile:** `/dashboard/profile` (authenticated, full profile hub)
 - **Redirect:** `/settings` → redirects to `/dashboard/settings`
+- **Auth:** `/auth` (login/signup), `/forgot-password`, `/reset-password?token=...`, `/verify-email`
+- **Protected:** Dashboard routes require authentication; unauthenticated users are redirected to `/auth`
 
 Ensure the user is logged in; otherwise they are redirected to `/auth`.
 
@@ -21,7 +23,7 @@ Ensure the user is logged in; otherwise they are redirected to `/auth`.
 - **Activity log:** List of recent actions with timestamps. Click an item with metadata to expand and view event details.
 - **CSV export (admin only):** **Export CSV** button visible when `isAdmin === true`. Click → `POST /api/users/me/activity/export`; file download.
 - **Team management (admin only):** AdminUserManagementPanel (tenant users list) visible when admin. Invite, change role, remove.
-- **Security section:** Change password link to `/forgot-password`; Two-factor (coming soon).
+- **Security section:** Change password link to `/forgot-password`; Two-factor authentication links to `/dashboard/settings?tab=mfa`.
 - **SSO badge:** When `is_sso_enabled`, SSO badge shown in header.
 
 **Data:** `GET /api/users/me`, `GET /api/users/me/activity`. Profile updates via `PATCH /api/users/me`.
@@ -39,7 +41,7 @@ Ensure the user is logged in; otherwise they are redirected to `/auth`.
 - Validation: clear name and save → inline error "Name is required".
 - **Security section:**  
   - **Change password** links to `/forgot-password`.  
-  - **Two-factor authentication** is disabled with "(Coming soon)".
+  - **Two-factor authentication** links to `/dashboard/settings?tab=mfa` for MFA setup/disable.
 
 **Data:** `settings.profile` (UserProfile). Email is read-only; timezone/language must be from allowed sets (see `TIMEZONES`, `LANGUAGES` in `src/lib/settings-mock.ts`).
 
@@ -100,7 +102,20 @@ Ensure the user is logged in; otherwise they are redirected to `/auth`.
 
 ---
 
-### 6. Security & Sessions (SecuritySessionsPanel)
+### 6. Two-factor authentication (MFAPanel)
+
+**What to test:**
+
+- **Status:** Shows "Enabled" or "Not enabled" based on `user.mfa_enabled`.
+- **Enable MFA:** Click **Enable MFA** → `POST /auth/mfa/setup`; QR code (or secret) displayed. Scan with authenticator app, enter 6-digit code → `POST /auth/mfa/verify`; success toast; status updates.
+- **Disable MFA:** When enabled, click **Disable MFA** → enter current code → `POST /auth/mfa/disable`; success toast.
+- **Tab from URL:** `/dashboard/settings?tab=mfa` opens the Two-factor tab directly.
+
+**Data:** `GET /auth/me` returns `mfa_enabled`. MFA setup/verify/disable use auth endpoints.
+
+---
+
+### 7. Security & Sessions (SecuritySessionsPanel)
 
 **What to test:**
 
@@ -112,12 +127,20 @@ Ensure the user is logged in; otherwise they are redirected to `/auth`.
 
 ---
 
-### 7. Audit & Raw Payloads (AuditAndPayloadPanel)
+### 8. Audit & Raw Payloads (AuditAndPayloadPanel)
 
 **What to test:**
 
 - **Raw payload retention:** short copy and link to **Privacy Policy** (`/privacy-policy`).
 - **Audit logs:** button links to `/admin/audit-logs` and is **only visible when `useCurrentUser().isAdmin === true`**. Non-admins do not see this link.
+
+---
+
+## Password reset flow
+
+1. **Request reset:** User visits `/forgot-password`, enters email → `POST /auth/password-reset-request` with `{ email }`. Success: "Check your email" message.
+2. **Set new password:** User clicks link in email (e.g. `/reset-password?token=...`). Enters new password with strength meter, confirms → `POST /auth/password-reset` with `{ token, newPassword }`. Success: redirect to `/auth`.
+3. **Invalid token:** If token missing or invalid, page shows "Invalid reset link" with link to request new one.
 
 ---
 
@@ -157,6 +180,19 @@ Mock auth: ensure `authApi.getMe` (or mock) returns the desired `role` so `useCu
 
 ---
 
+## Auth & Password Reset
+
+**Password reset flow:**
+
+1. User visits `/forgot-password`, enters email → `POST /auth/password-reset-request` { email }.
+2. User receives email with link to `/reset-password?token=...`.
+3. User enters new password (with strength meter) → `POST /auth/password-reset` { token, newPassword }.
+4. Success → redirect to `/auth`.
+
+**Password requirements:** Min 8 chars, uppercase, lowercase, number, symbol. Password strength meter shown on signup and reset.
+
+---
+
 ## API contract summary
 
 | Method | Endpoint | Purpose |
@@ -174,8 +210,13 @@ Mock auth: ensure `authApi.getMe` (or mock) returns the desired `role` so `useCu
 | DELETE | `/api/settings/team/:userId` | Remove member |
 | GET | `/api/settings/sessions` | List sessions |
 | POST | `/api/settings/sessions/terminate` | Sign out other sessions |
+| POST | `/auth/password-reset-request` | Request password reset email; body `{ email }` |
+| POST | `/auth/password-reset` | Set new password; body `{ token, newPassword }` |
+| POST | `/auth/mfa/setup` | Start MFA enrollment; returns secret/QR |
+| POST | `/auth/mfa/verify` | Verify MFA code during enrollment; body `{ code }` |
+| POST | `/auth/mfa/disable` | Disable MFA; body `{ code }` |
 
-All endpoints require an authenticated user. Team and data-plane admin actions must be restricted by role on the backend.
+All endpoints require an authenticated user (except password-reset-request and password-reset). Team and data-plane admin actions must be restricted by role on the backend.
 
 ---
 

@@ -1,3 +1,5 @@
 export { MFAPromptModal } from "./MFAPromptModal"
 export { SSOLoginButton } from "./SSOLoginButton"
 export { InlineErrorBox } from "./InlineErrorBox"
+export { ProtectedRoute } from "./ProtectedRoute"
+export { PasswordStrengthMeter, computePasswordStrength } from "./PasswordStrengthMeter"

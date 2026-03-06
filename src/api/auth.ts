@@ -7,6 +7,7 @@ import type {
   VerificationStatusResponse,
   ResendVerificationResponse,
   CurrentUser,
+  MFASetupResponse,
 } from "@/types/auth"
 
 function normalizeSignUpPayload(credentials: SignUpInput): Record<string, unknown> {
@@ -51,8 +52,17 @@ export const authApi = {
     localStorage.removeItem("auth_token")
   },
 
+  /** Request password reset email. POST /auth/password-reset-request */
+  passwordResetRequest: async (email: string): Promise<void> =>
+    api.post("/auth/password-reset-request", { email: email.trim().toLowerCase() }),
+
+  /** Set new password via token from email. POST /auth/password-reset */
+  passwordReset: async (token: string, newPassword: string): Promise<void> =>
+    api.post("/auth/password-reset", { token, newPassword }),
+
+  /** Alias for passwordResetRequest (backward compatibility) */
   resetPassword: async (email: string): Promise<void> =>
-    api.post("/auth/password-reset", { email: email.trim().toLowerCase() }),
+    api.post("/auth/password-reset-request", { email: email.trim().toLowerCase() }),
 
   verifyEmail: async (token: string): Promise<{ verified: boolean }> => {
     const data = await api.get<{ verified?: boolean }>(`/auth/verify-email?token=${encodeURIComponent(token)}`)
@@ -80,6 +90,21 @@ export const authApi = {
     }
   },
 
+  mfaSetup: async (): Promise<MFASetupResponse> => {
+    const data = await api.post<MFASetupResponse>("/auth/mfa/setup", {})
+    return data ?? {}
+  },
+
+  /** Verify MFA code during enrollment. POST /auth/mfa/verify */
+  mfaVerifyEnroll: async (code: string): Promise<{ success?: boolean }> => {
+    const data = await api.post<{ success?: boolean }>("/auth/mfa/verify", { code })
+    return data ?? {}
+  },
+
+  mfaDisable: async (code: string): Promise<void> =>
+    api.post("/auth/mfa/disable", { code }),
+
+  /** Verify MFA during login. POST /auth/verify-mfa */
   verifyMfa: async (input: MFAVerifyInput): Promise<AuthResponse> => {
     const data = await api.post<AuthResponse>("/auth/verify-mfa", input)
     const token = data?.token
@@ -94,13 +119,14 @@ export const authApi = {
 
   getMe: async (): Promise<CurrentUser | null> => {
     try {
-      const data = await api.get<{ id?: string; email?: string; full_name?: string; role?: string } | null>("/auth/me")
+      const data = await api.get<{ id?: string; email?: string; full_name?: string; role?: string; mfa_enabled?: boolean } | null>("/auth/me")
       if (data && typeof data === "object" && typeof data.id === "string" && typeof data.email === "string") {
         return {
           id: data.id,
           email: data.email,
           full_name: data.full_name,
           role: data.role,
+          mfa_enabled: data.mfa_enabled,
         }
       }
       return null
