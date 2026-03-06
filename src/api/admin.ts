@@ -10,7 +10,6 @@ import {
   mockAuditLogs,
   mockUsers,
   mockReplayHealth,
-  mockPreflightResult,
   mockReplayJobs,
   mockAuditLogsPreview,
   getMockPreflight,
@@ -202,17 +201,15 @@ export const adminApi = {
   },
 
   // Data Replay endpoints
-  getDataReplayHealth: async (tenantId: string): Promise<ReplayHealth> => {
+  getDataReplayHealth: async (tenantId?: string): Promise<ReplayHealth> => {
     try {
-      const res = await api.get<ReplayHealth>(
-        `/admin/data-replay/health?tenantId=${encodeURIComponent(tenantId)}`
-      )
-      if (res?.tenantId) return res
+      const q = tenantId ? `?tenantId=${encodeURIComponent(tenantId)}` : ""
+      const res = await api.get<ReplayHealth>(`/admin/data-replay/health${q}`)
+      if (res?.status) return res
     } catch {
       /* fall through to mock */
     }
-    const { mockReplayHealth } = await import("@/lib/admin-mock")
-    return { ...mockReplayHealth, tenantId }
+    return { ...mockReplayHealth, ...(tenantId ? { tenantId } : {}) }
   },
 
   postDataReplayPreflight: async (body: {
@@ -226,7 +223,6 @@ export const adminApi = {
     } catch {
       /* fall through to mock */
     }
-    const { getMockPreflight } = await import("@/lib/admin-mock")
     return getMockPreflight(body.tenantId, body.windowStart, body.windowEnd)
   },
 
@@ -235,9 +231,9 @@ export const adminApi = {
     windowStart: string
     windowEnd: string
     mode: ReplayMode
-  }): Promise<{ jobId: string; status: string }> => {
+  }): Promise<{ jobId: string; status: string } & Partial<import("@/types/admin").DryRunResult>> => {
     try {
-      const res = await api.post<{ jobId: string; status: string }>(
+      const res = await api.post<{ jobId: string; status: string } & Partial<import("@/types/admin").DryRunResult>>(
         "/admin/data-replay/run",
         body
       )
@@ -246,26 +242,78 @@ export const adminApi = {
       /* fall through to mock */
     }
     const jobId = `job-${Date.now()}`
-    return { jobId, status: body.mode === "dry-run" ? "completed" : "queued" }
+    if (body.mode === "dry-run") {
+      const { getMockPreflight } = await import("@/lib/admin-mock")
+      const preflight = getMockPreflight(body.tenantId, body.windowStart, body.windowEnd)
+      return {
+        jobId,
+        status: "completed",
+        estimatedEventCount: preflight.estimatedEventCount,
+        estimatedResources: preflight.estimatedResources,
+        batchEstimates: preflight.batchEstimates,
+        summary: `Dry-run completed: ${preflight.estimatedEventCount} events estimated`,
+      }
+    }
+    return { jobId, status: "queued" }
   },
 
-  getDataReplayJobs: async (params: {
+  getDataReplayJobs: async (params?: {
     tenantId?: string
     windowStart?: string
     windowEnd?: string
   }): Promise<ReplayJob[]> => {
     try {
       const q = new URLSearchParams()
-      if (params.tenantId) q.set("tenantId", params.tenantId)
-      if (params.windowStart) q.set("windowStart", params.windowStart)
-      if (params.windowEnd) q.set("windowEnd", params.windowEnd)
-      const res = await api.get<{ data?: ReplayJob[]; items?: ReplayJob[] }>(
-        `/admin/data-replay/jobs?${q.toString()}`
+      if (params?.tenantId) q.set("tenantId", params.tenantId)
+      if (params?.windowStart) q.set("windowStart", params.windowStart)
+      if (params?.windowEnd) q.set("windowEnd", params.windowEnd)
+      const query = q.toString()
+      const res = await api.get<{ data?: ReplayJob[]; jobs?: ReplayJob[] } | ReplayJob[]>(
+        `/admin/data-replay/jobs${query ? `?${query}` : ""}`
       )
-      const raw = (res as { data?: ReplayJob[] })?.data ?? (res as { items?: ReplayJob[] })?.items
+      const raw = (res as { data?: ReplayJob[]; jobs?: ReplayJob[] })?.data ??
+        (res as { data?: ReplayJob[]; jobs?: ReplayJob[] })?.jobs ??
+        (res as ReplayJob[])
       return safeArray(raw)
     } catch {
-      return []
+      return mockReplayJobs
+    }
+  },
+
+  getDataReplayJobProgress: async (jobId: string) => {
+    try {
+      const res = await api.get<{ jobId: string; status: string; progressPercent: number; etaSeconds?: number }>(
+        `/admin/data-replay/jobs/${jobId}/progress`
+      )
+      if (res?.jobId) return res
+    } catch {
+      /* fall through to mock */
+    }
+    return {
+      jobId,
+      status: "completed" as const,
+      progressPercent: 100,
+      eventsProcessed: 1247,
+      totalEvents: 1247,
+    }
+  },
+
+  getDataReplayAuditLogs: async (params?: {
+    tenantId?: string
+    relatedJobId?: string
+  }) => {
+    try {
+      const q = new URLSearchParams()
+      if (params?.tenantId) q.set("tenantId", params.tenantId)
+      if (params?.relatedJobId) q.set("relatedJobId", params.relatedJobId)
+      q.set("actionType", "replay_*")
+      const res = await api.get<{ data?: unknown[] } | unknown[]>(
+        `/admin/audit-logs?${q.toString()}`
+      )
+      const raw = (res as { data?: unknown[] })?.data ?? (res as unknown[])
+      return (Array.isArray(raw) ? raw : []) as import("@/types/admin").AuditLogPreview[]
+    } catch {
+      return mockAuditLogsPreview
     }
   },
 }

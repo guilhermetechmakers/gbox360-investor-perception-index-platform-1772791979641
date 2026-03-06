@@ -158,30 +158,47 @@ export const mockAuditLogs: AuditLogsResponse = {
 
 /** Data Replay mock data */
 export const mockReplayHealth: ReplayHealth = {
+  tenantId: "t1",
   status: "healthy",
   backlogSize: 12,
-  streamingLagMs: 450,
-  retryCountPerTenant: 2,
+  streamingLagSeconds: 0,
+  retryCount: 0,
   idempotencyEnabled: true,
-  retryPolicy: "exponential-backoff",
+  retryPolicy: "exponential_backoff",
 }
 
+/** Data Replay — mock preflight result */
 export const mockPreflightResult: PreflightResult = {
   valid: true,
-  estimatedEvents: 1247,
-  resourceEstimate: {
+  estimatedEventCount: 1247,
+  estimatedResources: {
     cpuCores: 2,
     memoryMB: 512,
     networkIoMB: 48,
   },
-  idempotencyStatus: "ok",
-  backlogHealth: "ok",
-  dryRunBatches: [
-    { batchIndex: 1, eventCount: 250, estimatedDurationMs: 1200 },
-    { batchIndex: 2, eventCount: 250, estimatedDurationMs: 1180 },
-    { batchIndex: 3, eventCount: 250, estimatedDurationMs: 1150 },
-    { batchIndex: 4, eventCount: 247, estimatedDurationMs: 1100 },
+  batchEstimates: [
+    { batchIndex: 0, eventCount: 250 },
+    { batchIndex: 1, eventCount: 250 },
+    { batchIndex: 2, eventCount: 250 },
+    { batchIndex: 3, eventCount: 247 },
   ],
+  idempotencyStatus: "enabled",
+  retryPolicy: "exponential_backoff",
+}
+
+/** Data Replay — mock preflight for tenant/window (variance for demo) */
+export function getMockPreflight(
+  tenantId: string,
+  windowStart: string,
+  _windowEnd: string
+): PreflightResult {
+  const base = mockPreflightResult.estimatedEventCount ?? mockPreflightResult.estimatedEvents ?? 1247
+  const variance = (tenantId.length + windowStart.length) % 500
+  return {
+    ...mockPreflightResult,
+    estimatedEventCount: Math.max(0, base + variance),
+    estimatedEvents: Math.max(100, base + variance),
+  }
 }
 
 export const mockReplayJobs: ReplayJob[] = [
@@ -231,19 +248,6 @@ export const mockAuditLogsPreview: AuditLogPreview[] = [
     payloadRef: "p-002",
   },
 ]
-
-/** Data Replay — mock preflight for tenant/window (variance for demo) */
-export function getMockPreflight(
-  _tenantId: string,
-  _windowStart: string,
-  _windowEnd: string
-): PreflightResult {
-  const variance = (_tenantId.length + _windowStart.length) % 500
-  return {
-    ...mockPreflightResult,
-    estimatedEvents: Math.max(100, mockPreflightResult.estimatedEvents + variance),
-  }
-}
 
 export const mockUsers: Record<string, AdminUser[]> = {
   t1: [

@@ -186,13 +186,21 @@ export type ReplayMode = "dry-run" | "execute"
 export interface ResourceEstimate {
   cpuCores?: number
   memoryMB?: number
-  networkIOMB?: number
+  networkIoMB?: number
+}
+
+/** Dry-run batch for preflight */
+export interface DryRunBatch {
+  batchIndex: number
+  eventCount: number
+  estimatedDurationMs?: number
 }
 
 /** Data Replay — ReplayJob */
 export interface ReplayJob {
   id: string
   tenantId: string
+  tenantName?: string
   windowStart: string
   windowEnd: string
   mode: ReplayMode
@@ -210,11 +218,13 @@ export interface ReplayJob {
 
 /** Data Replay — Ingestion health per tenant */
 export interface ReplayHealth {
-  tenantId: string
+  tenantId?: string
   status: "healthy" | "degraded" | "down"
   backlogSize: number
   streamingLagSeconds?: number
+  streamingLagMs?: number
   retryCount?: number
+  retryCountPerTenant?: number
   idempotencyEnabled: boolean
   retryPolicy?: string
 }
@@ -222,10 +232,14 @@ export interface ReplayHealth {
 /** Data Replay — Preflight result */
 export interface PreflightResult {
   valid: boolean
-  estimatedEventCount: number
-  estimatedResources: ResourceEstimate
+  estimatedEventCount?: number
+  estimatedEvents?: number
+  estimatedResources?: ResourceEstimate
+  resourceEstimate?: ResourceEstimate
   batchEstimates?: { batchIndex: number; eventCount: number }[]
+  dryRunBatches?: { batchIndex: number; eventCount: number; estimatedDurationMs: number }[]
   idempotencyStatus?: string
+  backlogHealth?: string
   retryPolicy?: string
 }
 
@@ -236,50 +250,6 @@ export interface DryRunResult {
   estimatedResources: ResourceEstimate
   batchEstimates?: { batchIndex: number; eventCount: number }[]
   summary?: string
-}
-
-/** Data Replay — ReplayJob status */
-export type ReplayJobStatus =
-  | "queued"
-  | "running"
-  | "completed"
-  | "failed"
-  | "cancelled"
-  | "paused"
-
-/** Data Replay — mode */
-export type ReplayMode = "dry-run" | "execute"
-
-/** Ingestion health for preflight */
-export interface ReplayHealth {
-  status: "healthy" | "degraded" | "down"
-  backlogSize: number
-  streamingLagMs: number
-  retryCountPerTenant: number
-  idempotencyEnabled: boolean
-  retryPolicy: string
-}
-
-/** Preflight result */
-export interface PreflightResult {
-  valid: boolean
-  estimatedEvents: number
-  resourceEstimate: ResourceEstimate
-  idempotencyStatus: "ok" | "warning" | "error"
-  backlogHealth: "ok" | "warning" | "critical"
-  dryRunBatches?: DryRunBatch[]
-}
-
-export interface ResourceEstimate {
-  cpuCores: number
-  memoryMB: number
-  networkIoMB: number
-}
-
-export interface DryRunBatch {
-  batchIndex: number
-  eventCount: number
-  estimatedDurationMs: number
 }
 
 /** Replay run request */
@@ -306,23 +276,6 @@ export interface ReplayJobProgress {
   etaSeconds?: number
   eventsProcessed?: number
   totalEvents?: number
-}
-
-/** Replay job for history */
-export interface ReplayJob {
-  id: string
-  tenantId: string
-  tenantName?: string
-  windowStart: string
-  windowEnd: string
-  mode: ReplayMode
-  status: ReplayJobStatus
-  startedAt: string
-  endedAt?: string
-  estimatedResources?: ResourceEstimate
-  actualResources?: ResourceEstimate
-  summary?: string
-  createdBy?: string
 }
 
 /** Audit log preview for replay context */

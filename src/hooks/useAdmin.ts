@@ -11,6 +11,14 @@ export const adminKeys = {
   auditLogPayload: (id: string) => ["admin", "audit-logs", id, "payload"] as const,
   users: (tenantId: string) => ["admin", "users", tenantId] as const,
   replayStatus: (id: string) => ["admin", "replays", id, "status"] as const,
+  dataReplayHealth: (tenantId?: string) => ["admin", "data-replay", "health", tenantId ?? ""] as const,
+  dataReplayPreflight: (params: { tenantId: string; windowStart: string; windowEnd: string }) =>
+    ["admin", "data-replay", "preflight", params] as const,
+  dataReplayJobs: (params?: { tenantId?: string; windowStart?: string; windowEnd?: string }) =>
+    ["admin", "data-replay", "jobs", params ?? {}] as const,
+  dataReplayJobProgress: (jobId: string) => ["admin", "data-replay", "jobs", jobId, "progress"] as const,
+  dataReplayAuditLogs: (params?: { tenantId?: string; relatedJobId?: string }) =>
+    ["admin", "data-replay", "audit-logs", params ?? {}] as const,
 }
 
 export function useAdminDashboardHealth() {
@@ -137,5 +145,106 @@ export function useAdminReplayStatus(id: string | null) {
     enabled: !!id,
     refetchInterval: (query) =>
       query.state.data?.status === "RUNNING" ? 2000 : false,
+  })
+}
+
+export function useAdminDataReplayHealth(tenantId: string | null) {
+  return useQuery({
+    queryKey: adminKeys.dataReplayHealth(tenantId ?? ""),
+    queryFn: () => adminApi.getDataReplayHealth(tenantId ?? ""),
+    enabled: !!tenantId,
+  })
+}
+
+export function useAdminDataReplayPreflight(params: {
+  tenantId: string
+  windowStart: string
+  windowEnd: string
+} | null) {
+  return useQuery({
+    queryKey: adminKeys.dataReplayPreflight(params ?? { tenantId: "", windowStart: "", windowEnd: "" }),
+    queryFn: () =>
+      params
+        ? adminApi.postDataReplayPreflight(params)
+        : Promise.resolve(null),
+    enabled: !!params?.tenantId && !!params?.windowStart && !!params?.windowEnd,
+  })
+}
+
+export function useAdminDataReplayJobs(params?: {
+  tenantId?: string
+  windowStart?: string
+  windowEnd?: string
+}) {
+  return useQuery({
+    queryKey: adminKeys.dataReplayJobs(params),
+    queryFn: () => adminApi.getDataReplayJobs(params),
+    select: (data) => safeArray(data),
+  })
+}
+
+export function useAdminDataReplayPreflightMutation() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (body: {
+      tenantId: string
+      windowStart: string
+      windowEnd: string
+    }) => adminApi.postDataReplayPreflight(body),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "data-replay"] })
+    },
+    onError: (error: Error) => {
+      toast.error(error.message ?? "Preflight failed")
+    },
+  })
+}
+
+export function useAdminDataReplayJobProgress(jobId: string | null) {
+  return useQuery({
+    queryKey: adminKeys.dataReplayJobProgress(jobId ?? ""),
+    queryFn: () => (jobId ? adminApi.getDataReplayJobProgress(jobId) : Promise.resolve(null)),
+    enabled: !!jobId,
+    refetchInterval: (query) => {
+      const status = (query.state.data as { status?: string })?.status
+      return status === "running" || status === "queued" ? 1500 : false
+    },
+  })
+}
+
+export function useAdminDataReplayAuditLogs(params?: {
+  tenantId?: string
+  relatedJobId?: string
+}) {
+  return useQuery({
+    queryKey: adminKeys.dataReplayAuditLogs(params ?? {}),
+    queryFn: () => adminApi.getDataReplayAuditLogs(params),
+    select: (data) => safeArray(data),
+  })
+}
+
+export function useAdminDataReplayRun() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (params: {
+      tenantId: string
+      windowStart: string
+      windowEnd: string
+      mode: "dry-run" | "execute"
+    }) => adminApi.postDataReplayRun(params),
+    onSuccess: (data) => {
+      if (data?.jobId) {
+        queryClient.invalidateQueries({ queryKey: adminKeys.dataReplayJobs() })
+        queryClient.invalidateQueries({ queryKey: adminKeys.dataReplayJobProgress(data.jobId) })
+      }
+      toast.success(
+        data?.status === "completed"
+          ? "Dry-run completed"
+          : "Replay job started"
+      )
+    },
+    onError: (error: Error) => {
+      toast.error(error.message ?? "Replay failed")
+    },
   })
 }
