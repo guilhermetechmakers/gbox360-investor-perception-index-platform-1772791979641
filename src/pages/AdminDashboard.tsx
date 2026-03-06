@@ -16,6 +16,10 @@ import {
   Play,
   Bell,
   RotateCcw,
+  Rss,
+  MessageCircle,
+  FileBarChart,
+  RefreshCw,
 } from "lucide-react"
 import {
   AreaChart,
@@ -27,6 +31,7 @@ import {
   CartesianGrid,
 } from "recharts"
 import { useAdminDashboardHealth, useAdminHealthCheck } from "@/hooks/useAdmin"
+import { useIngestionStatus, useTriggerNewsIngestion } from "@/hooks/useIngestion"
 import { safeArray } from "@/lib/data-guard"
 import { formatDistanceToNow, subHours, format } from "date-fns"
 import { useMemo, useState } from "react"
@@ -76,10 +81,13 @@ export default function AdminDashboard() {
   const [notifyOnFail, setNotifyOnFail] = useState(false)
   const { data, isLoading } = useAdminDashboardHealth()
   const healthCheckMutation = useAdminHealthCheck()
+  const { data: ingestionData, isLoading: ingestionLoading } = useIngestionStatus()
+  const triggerNews = useTriggerNewsIngestion()
   const health = data?.health
   const tenants = safeArray(data?.tenants)
   const alerts = safeArray(data?.alerts)
   const chartData = useHealthChartData(health ?? null)
+  const ingestionSources = safeArray(ingestionData?.sources)
 
   return (
     <AnimatedPage>
@@ -125,6 +133,109 @@ export default function AdminDashboard() {
                 aria-label="Toggle notifications on ingestion failure"
               />
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Ingestion sources: News, Social, Earnings — health, throughput, DLQ, quick actions */}
+        <Card className="rounded-[1.25rem] border border-border bg-card shadow-card">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="h-5 w-5 text-primary" />
+              Ingestion sources
+            </CardTitle>
+            <CardDescription>
+              Throughput, last run, DLQ counts, and manual triggers
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {ingestionLoading && ingestionSources.length === 0 ? (
+              <div className="grid gap-4 sm:grid-cols-3">
+                <Skeleton className="h-32 rounded-lg" />
+                <Skeleton className="h-32 rounded-lg" />
+                <Skeleton className="h-32 rounded-lg" />
+              </div>
+            ) : (
+              <div className="grid gap-4 sm:grid-cols-3">
+                {(["news", "social", "earnings_transcripts"] as const).map((key) => {
+                  const src = ingestionSources.find((s) => s.source === key) ?? {
+                    source: key,
+                    status: "healthy" as const,
+                    lastIngestedAt: null,
+                    lastRunAt: null,
+                    throughput24h: 0,
+                    errorCount24h: 0,
+                    dlqCount: 0,
+                  }
+                  const sourceConfig: Record<string, { icon: typeof Rss; label: string }> = {
+                    news: { icon: Rss, label: "News" },
+                    social: { icon: MessageCircle, label: "Social (X)" },
+                    earnings_transcripts: { icon: FileBarChart, label: "Earnings transcripts" },
+                  }
+                  const cfg = sourceConfig[key] ?? { icon: Activity, label: key }
+                  const Icon = cfg.icon
+                  const statusColor =
+                    src.status === "healthy"
+                      ? "text-green-600"
+                      : src.status === "degraded"
+                        ? "text-amber-600"
+                        : "text-red-600"
+                  return (
+                    <div
+                      key={key}
+                      className="rounded-xl border border-border bg-muted/20 p-4 transition-shadow hover:shadow-md"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                            <Icon className="h-5 w-5 text-primary" />
+                          </div>
+                          <span className="font-medium">{cfg.label}</span>
+                        </div>
+                        <span className={`text-xs font-medium ${statusColor}`}>
+                          {src.status}
+                        </span>
+                      </div>
+                      <div className="mt-3 space-y-1 text-sm text-muted-foreground">
+                        <p>
+                          Last run:{" "}
+                          {src.lastRunAt ?? src.lastIngestedAt
+                            ? formatDistanceToNow(new Date(src.lastRunAt ?? src.lastIngestedAt ?? ""), {
+                                addSuffix: true,
+                              })
+                            : "—"}
+                        </p>
+                        <p>24h throughput: {src.throughput24h}</p>
+                        {src.dlqCount > 0 && (
+                          <p className="text-amber-600">
+                            DLQ: {src.dlqCount}{" "}
+                            <Link
+                              to="/admin/audit-logs"
+                              className="text-primary hover:underline"
+                            >
+                              View
+                            </Link>
+                          </p>
+                        )}
+                      </div>
+                      {key === "news" && (
+                        <Button
+                          size="sm"
+                          className="mt-3 w-full gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
+                          onClick={() => triggerNews.mutate({})}
+                          disabled={triggerNews.isPending}
+                          aria-label="Trigger news ingestion"
+                        >
+                          <RefreshCw
+                            className={`h-4 w-4 ${triggerNews.isPending ? "animate-spin" : ""}`}
+                          />
+                          {triggerNews.isPending ? "Running…" : "Trigger news"}
+                        </Button>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </CardContent>
         </Card>
 

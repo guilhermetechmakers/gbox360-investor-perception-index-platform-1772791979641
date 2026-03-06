@@ -4,6 +4,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { AnimatedPage } from "@/components/AnimatedPage"
 import { DataAccessGuard } from "@/components/admin/DataAccessGuard"
 import {
@@ -30,10 +37,11 @@ import {
   useAdminDataReplayAuditLogs,
 } from "@/hooks/useAdmin"
 import { useReplayByEvent, useReplayJobStatus } from "@/hooks/useArchive"
+import { useReplayEvents } from "@/hooks/useIngestion"
 import type { PreflightResult, DryRunResult, ReplayJob } from "@/types/admin"
 import { safeArray } from "@/lib/data-guard"
 import { format, subDays } from "date-fns"
-import { RotateCcw, Hash, AlertTriangle } from "lucide-react"
+import { RotateCcw, Hash, AlertTriangle, Play } from "lucide-react"
 import { toast } from "sonner"
 
 function getDefaultTimeWindow(): TimeWindow {
@@ -62,6 +70,7 @@ export default function AdminDataReplay() {
     jobId?: string
   } | null>(null)
   const [eventReplayJobId, setEventReplayJobId] = useState<string | null>(null)
+  const [replaySourceFilter, setReplaySourceFilter] = useState<string>("")
 
   const { data: tenants = [] } = useAdminTenants()
   const tenantsList = safeArray(tenants)
@@ -79,6 +88,7 @@ export default function AdminDataReplay() {
   })
   const replayByEventMutation = useReplayByEvent()
   const { data: eventReplayJob } = useReplayJobStatus(eventReplayJobId)
+  const replayEventsMutation = useReplayEvents()
 
   useEffect(() => {
     if (!tenantId || !timeWindow.start || !timeWindow.end) return
@@ -267,6 +277,64 @@ export default function AdminDataReplay() {
                 value={timeWindow}
                 onChange={setTimeWindow}
               />
+            </CardContent>
+          </Card>
+
+          {/* Single event replay */}
+          <Card className="card-elevated rounded-[1rem] border border-border bg-card shadow-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 font-display">
+                <Play className="h-5 w-5 text-primary" aria-hidden />
+                Replay NarrativeEvent range
+              </CardTitle>
+              <CardDescription>
+                Replay events by source and since date. Does not duplicate records; re-runs analytics pipeline.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="replay-source-filter">Source</Label>
+                  <Select
+                    value={replaySourceFilter || "all"}
+                    onValueChange={(v) => setReplaySourceFilter(v === "all" ? "" : v)}
+                  >
+                    <SelectTrigger id="replay-source-filter">
+                      <SelectValue placeholder="All sources" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All sources</SelectItem>
+                      <SelectItem value="news">News</SelectItem>
+                      <SelectItem value="social">Social (X)</SelectItem>
+                      <SelectItem value="earnings_transcripts">Earnings transcripts</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="replay-since">Since (date)</Label>
+                  <Input
+                    id="replay-since"
+                    type="date"
+                    value={timeWindow.start}
+                    onChange={(e) => setTimeWindow((w) => ({ ...w, start: e.target.value }))}
+                  />
+                </div>
+              </div>
+              <Button
+                className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
+                onClick={() =>
+                  replayEventsMutation.mutate({
+                    since: `${timeWindow.start}T00:00:00.000Z`,
+                    source: replaySourceFilter || undefined,
+                    eventId: eventIdInput.trim() || undefined,
+                  })
+                }
+                disabled={!timeWindow.start || replayEventsMutation.isPending}
+                aria-label="Replay events since selected date"
+              >
+                <RotateCcw className="h-4 w-4" />
+                {replayEventsMutation.isPending ? "Replaying…" : "Replay events"}
+              </Button>
             </CardContent>
           </Card>
 

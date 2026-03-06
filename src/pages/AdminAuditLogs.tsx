@@ -14,8 +14,9 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { AnimatedPage } from "@/components/AnimatedPage"
-import { FileText, ChevronLeft, ChevronRight, ExternalLink, Archive } from "lucide-react"
+import { FileText, ChevronLeft, ChevronRight, ExternalLink, Archive, Inbox } from "lucide-react"
 import { useAdminAuditLogs, useAdminAuditLogPayload, useAdminTenants, useAdminAuditLogExport, useAdminDashboardHealth } from "@/hooks/useAdmin"
+import { useDlq, useRetryDlqItem } from "@/hooks/useIngestion"
 import { useArchiveAuditLogs } from "@/hooks/useArchive"
 import { safeArray } from "@/lib/data-guard"
 import { format } from "date-fns"
@@ -62,6 +63,7 @@ export default function AdminAuditLogs() {
   const [archivePageSize] = useState(25)
   const [archiveEventIdFilter, setArchiveEventIdFilter] = useState("")
   const [archiveSourceFilter, setArchiveSourceFilter] = useState("")
+  const [dlqSource, setDlqSource] = useState<string>("news")
 
   const params = useMemo(
     () => ({
@@ -95,6 +97,8 @@ export default function AdminAuditLogs() {
     [archiveEventIdFilter, archiveSourceFilter, start, end, archivePage, archivePageSize]
   )
   const { data: archiveRes, isLoading: archiveLoading } = useArchiveAuditLogs(archiveParams)
+  const { data: dlqData, isLoading: dlqLoading } = useDlq(dlqSource)
+  const retryDlqMutation = useRetryDlqItem(dlqSource)
   const archiveItems = Array.isArray(archiveRes?.items) ? archiveRes.items : (archiveRes?.data ?? [])
   const archiveCount = archiveRes?.count ?? 0
   const archiveTotalPages = Math.max(1, Math.ceil(archiveCount / archivePageSize))
@@ -524,6 +528,89 @@ export default function AdminAuditLogs() {
                   </div>
                 )}
               </>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Dead-letter queue (DLQ): failed ingestion items by source */}
+        <Card className="card-elevated rounded-[1.25rem] border border-border bg-card shadow-card">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 font-display">
+              <Inbox className="h-5 w-5 text-primary" />
+              Dead-letter queue
+            </CardTitle>
+            <CardDescription>
+              Failed ingestion items by source. Retry to re-queue for processing.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="mb-4 flex flex-wrap items-center gap-4">
+              <Label htmlFor="dlq-source">Source</Label>
+              <Select value={dlqSource} onValueChange={setDlqSource}>
+                <SelectTrigger id="dlq-source" className="w-48">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="news">News</SelectItem>
+                  <SelectItem value="social">Social</SelectItem>
+                  <SelectItem value="earnings_transcripts">Earnings transcripts</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {dlqLoading ? (
+              <div className="space-y-2">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <Skeleton key={i} className="h-10 w-full" />
+                ))}
+              </div>
+            ) : (dlqData?.items ?? []).length === 0 ? (
+              <div className="rounded-lg border border-dashed border-border py-8 text-center text-muted-foreground">
+                No DLQ entries for this source.
+              </div>
+            ) : (
+              <ScrollArea className="w-full">
+                <div className="min-w-[700px]">
+                  <table className="w-full border-collapse text-sm" role="table" aria-label="DLQ entries">
+                    <thead>
+                      <tr className="sticky top-0 z-10 border-b border-border bg-muted/30">
+                        <th className="p-3 text-left font-medium" scope="col">Idempotency key</th>
+                        <th className="p-3 text-left font-medium" scope="col">Error</th>
+                        <th className="p-3 text-left font-medium" scope="col">Retries</th>
+                        <th className="p-3 text-left font-medium" scope="col">Last attempted</th>
+                        <th className="p-3 text-left font-medium" scope="col">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(dlqData?.items ?? []).map((row) => (
+                        <tr key={row.id} className="border-b border-border hover:bg-muted/30">
+                          <td className="max-w-[200px] truncate p-3 font-mono text-xs" title={row.idempotencyKey}>
+                            {row.idempotencyKey}
+                          </td>
+                          <td className="max-w-[240px] truncate p-3 text-muted-foreground" title={row.errorMessage ?? undefined}>
+                            {row.errorMessage ?? "—"}
+                          </td>
+                          <td className="p-3">{row.retryCount}</td>
+                          <td className="p-3 text-muted-foreground">
+                            {row.lastAttemptedAt ? format(new Date(row.lastAttemptedAt), "PPp") : "—"}
+                          </td>
+                          <td className="p-3">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="gap-1 text-primary hover:bg-primary/10"
+                              onClick={() => retryDlqMutation.mutate(row.idempotencyKey)}
+                              disabled={retryDlqMutation.isPending}
+                              aria-label={`Retry ${row.idempotencyKey}`}
+                            >
+                              Retry
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </ScrollArea>
             )}
           </CardContent>
         </Card>
