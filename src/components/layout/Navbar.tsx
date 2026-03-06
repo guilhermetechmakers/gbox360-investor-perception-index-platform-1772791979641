@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button"
 
 export function Navbar() {
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-border bg-card shadow-sm">
+    <header className="sticky top-0 z-40 w-full border-b border-border bg-card shadow-sm print:hidden">
       <div className="container flex h-14 items-center justify-between px-4">
         <Link to="/" className="flex items-center gap-2 font-display text-xl font-semibold text-foreground">
           Gbox360

@@ -135,12 +135,12 @@ function EmailPasswordLoginForm({
         <button
           type="button"
           onClick={onForgotPassword}
-          className="text-sm text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded"
+          className="text-sm text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded min-h-[44px] min-w-[44px] inline-flex items-center"
         >
           Forgot password?
         </button>
       </div>
-      <Button type="submit" className="w-full" disabled={isLoading}>
+      <Button type="submit" className="w-full rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 focus-visible:ring-ring disabled:opacity-70" disabled={isLoading}>
         {isLoading ? (
           <>
             <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
@@ -274,7 +274,7 @@ function SignupForm({
           )}
         </div>
       </div>
-      <Button type="submit" className="w-full" disabled={isLoading}>
+      <Button type="submit" className="w-full rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 focus-visible:ring-ring disabled:opacity-70" disabled={isLoading}>
         {isLoading ? (
           <>
             <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
@@ -319,7 +319,7 @@ export default function UnifiedAuthPage() {
     }
     signIn.mutate(payload, {
       onSuccess: (response) => {
-        const requiresMfa = response?.mfa_required ?? false
+        const requiresMfa = response?.mfa_required === true
         if (requiresMfa) {
           setShowMfaPrompt(true)
         } else {
@@ -328,7 +328,8 @@ export default function UnifiedAuthPage() {
       },
       onError: (err) => {
         const msg = err?.message ?? "Sign in failed"
-        if (msg.toLowerCase().includes("mfa") || msg.toLowerCase().includes("2fa")) {
+        const suggestsMfa = typeof msg === "string" && (msg.toLowerCase().includes("mfa") || msg.toLowerCase().includes("2fa"))
+        if (suggestsMfa) {
           setShowMfaPrompt(true)
         } else {
           setServerError(msg)
@@ -357,8 +358,8 @@ export default function UnifiedAuthPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-[rgb(var(--hero-bg))]">
-      <header className="border-b border-border bg-card py-4">
+    <div className="min-h-screen flex flex-col bg-[rgb(var(--page-bg))]">
+      <header className="border-b border-border bg-card py-4 shadow-sm">
         <div className="container flex items-center justify-between px-4">
           <Link to="/" className="font-display text-xl font-semibold text-foreground">
             Gbox360
@@ -366,19 +367,19 @@ export default function UnifiedAuthPage() {
           <HeaderActions />
         </div>
       </header>
-      <AnimatedPage className="flex flex-1 items-center justify-center p-4">
-        <Card className="w-full max-w-md shadow-card">
-          <CardHeader>
-            <CardTitle className="font-display text-2xl text-center">
+      <AnimatedPage className="flex flex-1 items-center justify-center p-4 md:p-6">
+        <Card className="w-full max-w-md rounded-[18px] shadow-card transition-all duration-300 hover:shadow-[0_8px_28px_rgba(0,0,0,0.12)] border-border bg-card">
+          <CardHeader className="space-y-1">
+            <CardTitle className="font-display text-2xl text-center text-foreground">
               {activeTab === "login" ? "Log in" : "Create account"}
             </CardTitle>
-            <CardDescription className="text-center">
+            <CardDescription className="text-center text-muted-foreground">
               {activeTab === "login"
                 ? "Enter your email and password. SSO available for enterprise."
                 : "Sign up with email. Enterprise SSO available on request."}
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-2">
             <Tabs
               value={activeTab}
               onValueChange={(v) => {
@@ -387,17 +388,21 @@ export default function UnifiedAuthPage() {
               }}
               className="w-full"
             >
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="login">Log in</TabsTrigger>
-                <TabsTrigger value="signup">Sign up</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-2 h-11 rounded-xl p-1 bg-muted/50">
+                <TabsTrigger value="login" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                  Log in
+                </TabsTrigger>
+                <TabsTrigger value="signup" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                  Sign up
+                </TabsTrigger>
               </TabsList>
-              <TabsContent value="login" className="mt-6 space-y-4">
+              <TabsContent value="login" className="mt-6 space-y-4 animate-fade-in">
                 <SSOLoginButton />
                 <div className="relative">
                   <div className="absolute inset-0 flex items-center">
                     <span className="w-full border-t border-border" />
                   </div>
-                  <div className="relative flex justify-center text-xs uppercase">
+                  <div className="relative flex justify-center text-xs uppercase tracking-wider">
                     <span className="bg-card px-2 text-muted-foreground">
                       Or continue with email
                     </span>
@@ -410,13 +415,13 @@ export default function UnifiedAuthPage() {
                   onForgotPassword={handleForgotPassword}
                 />
               </TabsContent>
-              <TabsContent value="signup" className="mt-6 space-y-4">
+              <TabsContent value="signup" className="mt-6 space-y-4 animate-fade-in">
                 <SSOLoginButton />
                 <div className="relative">
                   <div className="absolute inset-0 flex items-center">
                     <span className="w-full border-t border-border" />
                   </div>
-                  <div className="relative flex justify-center text-xs uppercase">
+                  <div className="relative flex justify-center text-xs uppercase tracking-wider">
                     <span className="bg-card px-2 text-muted-foreground">
                       Or continue with email
                     </span>

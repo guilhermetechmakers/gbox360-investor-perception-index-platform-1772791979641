@@ -56,3 +56,45 @@
   outline: 2px solid rgb(var(--ring));
   outline-offset: 2px;
 }
+
+/* Print-friendly layout for legal pages */
+@media print {
+  body {
+    background: white !important;
+  }
+}
+
+/* Print styles for Privacy Policy and legal pages */
+@media print {
+  body {
+    background: white;
+  }
+
+  /* Hide navigation and non-essential UI when printing */
+  header nav,
+  header a[href*="auth"],
+  .print\\:hidden {
+    display: none !important;
+  }
+
+  /* Simplify layout for print */
+  .print\\:bg-white {
+    background: white !important;
+  }
+
+  /* Ensure sufficient contrast and readable font sizes */
+  .print\\:text-black {
+    color: #1f1f1f !important;
+  }
+
+  /* Avoid breaking sections across pages where possible */
+  section {
+    break-inside: avoid;
+  }
+
+  /* Prevent orphans and widows */
+  p {
+    orphans: 3;
+    widows: 3;
+  }
+}

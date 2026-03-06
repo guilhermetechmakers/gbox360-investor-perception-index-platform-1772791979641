@@ -6,6 +6,7 @@ import type {
   MFAVerifyInput,
   VerificationStatusResponse,
   ResendVerificationResponse,
+  CurrentUser,
 } from "@/types/auth"
 
 function normalizeSignUpPayload(credentials: SignUpInput): Record<string, unknown> {
@@ -27,15 +28,21 @@ export const authApi = {
       remember_me: credentials.rememberMe ?? false,
     }
     const data = await api.post<AuthResponse>("/auth/login", payload)
-    if (data?.token) localStorage.setItem("auth_token", data.token)
-    return data
+    const token = data?.token
+    if (typeof token === "string" && token) {
+      localStorage.setItem("auth_token", token)
+    }
+    return data ?? {}
   },
 
   signUp: async (credentials: SignUpInput): Promise<AuthResponse> => {
     const payload = normalizeSignUpPayload(credentials)
     const data = await api.post<AuthResponse>("/auth/register", payload)
-    if (data?.token) localStorage.setItem("auth_token", data.token)
-    return data
+    const token = data?.token
+    if (typeof token === "string" && token) {
+      localStorage.setItem("auth_token", token)
+    }
+    return data ?? {}
   },
 
   signOut: async (): Promise<void> => {
@@ -46,15 +53,19 @@ export const authApi = {
   resetPassword: async (email: string): Promise<void> =>
     api.post("/auth/password-reset", { email: email.trim().toLowerCase() }),
 
-  verifyEmail: async (token: string): Promise<{ verified: boolean }> =>
-    api.get<{ verified: boolean }>(`/auth/verify-email?token=${encodeURIComponent(token)}`),
+  verifyEmail: async (token: string): Promise<{ verified: boolean }> => {
+    const data = await api.get<{ verified?: boolean }>(`/auth/verify-email?token=${encodeURIComponent(token)}`)
+    return { verified: data?.verified === true }
+  },
 
   getVerificationStatus: async (userId?: string): Promise<VerificationStatusResponse> => {
     const params = userId ? `?userId=${encodeURIComponent(userId)}` : ""
     const data = await api.get<VerificationStatusResponse>(`/auth/verification-status${params}`)
+    const status = data?.status
+    const validStatus = status === "pending" || status === "verified" || status === "failed" ? status : "pending"
     return {
-      status: data?.status ?? "pending",
-      updatedAt: data?.updatedAt,
+      status: validStatus,
+      updatedAt: data?.updatedAt ?? data?.lastUpdated,
     }
   },
 
@@ -62,25 +73,36 @@ export const authApi = {
     const body = payload ?? {}
     const data = await api.post<ResendVerificationResponse>("/auth/resend-verification", body)
     return {
-      success: data?.success ?? true,
+      success: data?.success !== false,
       message: data?.message,
-      cooldown: data?.cooldown,
+      cooldown: typeof data?.cooldown === "number" ? data.cooldown : undefined,
     }
   },
 
   verifyMfa: async (input: MFAVerifyInput): Promise<AuthResponse> => {
     const data = await api.post<AuthResponse>("/auth/verify-mfa", input)
-    if (data?.token) localStorage.setItem("auth_token", data.token)
-    return data
+    const token = data?.token
+    if (typeof token === "string" && token) {
+      localStorage.setItem("auth_token", token)
+    }
+    return data ?? {}
   },
 
   initiateSSO: async (): Promise<{ url?: string }> =>
     api.post<{ url?: string }>("/auth/sso", {}),
 
-  getMe: async (): Promise<{ id: string; email: string; full_name?: string; role?: string } | null> => {
+  getMe: async (): Promise<CurrentUser | null> => {
     try {
-      const data = await api.get<{ id: string; email: string; full_name?: string; role?: string }>("/auth/me")
-      return data ?? null
+      const data = await api.get<{ id?: string; email?: string; full_name?: string; role?: string } | null>("/auth/me")
+      if (data && typeof data === "object" && typeof data.id === "string" && typeof data.email === "string") {
+        return {
+          id: data.id,
+          email: data.email,
+          full_name: data.full_name,
+          role: data.role,
+        }
+      }
+      return null
     } catch {
       return null
     }

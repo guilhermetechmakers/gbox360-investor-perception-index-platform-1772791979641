@@ -179,24 +179,24 @@ export default function VerifyEmail() {
 
   useEffect(() => {
     if (tokenStatus === "success") {
-      toast.success("Email verified. Redirecting…")
-      const t = setTimeout(() => navigate("/dashboard"), REDIRECT_DELAY_MS)
+      toast.success("Email verified. Redirecting to sign in…")
+      const t = setTimeout(() => navigate("/auth"), REDIRECT_DELAY_MS)
       return () => clearTimeout(t)
     }
   }, [tokenStatus, navigate])
 
   useEffect(() => {
     if (isPostSignupFlow && status === "verified") {
-      toast.success("Email verified. Redirecting…")
-      const t = setTimeout(() => navigate("/dashboard"), REDIRECT_DELAY_MS)
+      toast.success("Email verified. Redirecting to sign in…")
+      const t = setTimeout(() => navigate("/auth"), REDIRECT_DELAY_MS)
       return () => clearTimeout(t)
     }
   }, [isPostSignupFlow, status, navigate])
 
   if (hasToken) {
     return (
-      <div className="flex min-h-screen flex-col bg-[rgb(var(--hero-bg))]">
-        <header className="border-b border-border bg-card py-4">
+      <div className="flex min-h-screen flex-col bg-[rgb(var(--page-bg))]">
+        <header className="border-b border-border bg-card py-4 shadow-sm">
           <div className="container flex justify-center">
             <Link to="/" className="font-display text-xl font-semibold text-foreground">
               Gbox360
@@ -204,7 +204,7 @@ export default function VerifyEmail() {
           </div>
         </header>
         <AnimatedPage className="flex flex-1 items-center justify-center p-4">
-          <Card className="w-full max-w-md shadow-card">
+          <Card className="w-full max-w-md rounded-[18px] shadow-card border-border">
             <CardHeader>
               <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
                 {tokenStatus === "success" ? (
@@ -228,7 +228,7 @@ export default function VerifyEmail() {
               </CardTitle>
               <CardDescription className="text-center">
                 {tokenStatus === "success"
-                  ? "Your account is now active. Redirecting to dashboard…"
+                  ? "Your account is now active. Redirecting to sign in…"
                   : tokenStatus === "verifying"
                     ? "Please wait while we confirm your email."
                     : tokenStatus === "error"
@@ -263,8 +263,8 @@ export default function VerifyEmail() {
 
   if (!userId && !isUserLoading) {
     return (
-      <div className="flex min-h-screen flex-col bg-[rgb(var(--hero-bg))]">
-        <header className="border-b border-border bg-card py-4">
+      <div className="flex min-h-screen flex-col bg-[rgb(var(--page-bg))]">
+        <header className="border-b border-border bg-card py-4 shadow-sm">
           <div className="container flex justify-center">
             <Link to="/" className="font-display text-xl font-semibold text-foreground">
               Gbox360
@@ -272,7 +272,7 @@ export default function VerifyEmail() {
           </div>
         </header>
         <AnimatedPage className="flex flex-1 items-center justify-center p-4">
-          <Card className="w-full max-w-md shadow-card">
+          <Card className="w-full max-w-md rounded-[18px] shadow-card border-border">
             <CardHeader>
               <CardTitle className="text-center font-display text-2xl">
                 Verify your email
@@ -302,8 +302,8 @@ export default function VerifyEmail() {
 
   if (!userId && isUserLoading) {
     return (
-      <div className="flex min-h-screen flex-col bg-[rgb(var(--hero-bg))]">
-        <header className="border-b border-border bg-card py-4">
+      <div className="flex min-h-screen flex-col bg-[rgb(var(--page-bg))]">
+        <header className="border-b border-border bg-card py-4 shadow-sm">
           <div className="container flex justify-center">
             <Link to="/" className="font-display text-xl font-semibold text-foreground">
               Gbox360
@@ -311,7 +311,7 @@ export default function VerifyEmail() {
           </div>
         </header>
         <AnimatedPage className="flex flex-1 items-center justify-center p-4">
-          <Card className="w-full max-w-md shadow-card">
+          <Card className="w-full max-w-md rounded-[18px] shadow-card border-border">
             <CardContent className="flex flex-col items-center gap-4 py-12">
               <Loader2 className="h-10 w-10 animate-spin text-primary" aria-hidden />
               <p className="text-sm text-muted-foreground">Loading…</p>
@@ -323,8 +323,8 @@ export default function VerifyEmail() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-[rgb(var(--hero-bg))]">
-      <header className="border-b border-border bg-card py-4">
+    <div className="flex min-h-screen flex-col bg-[rgb(var(--page-bg))]">
+      <header className="border-b border-border bg-card py-4 shadow-sm">
         <div className="container flex items-center justify-between px-4">
           <Link to="/" className="font-display text-xl font-semibold text-foreground">
             Gbox360
@@ -338,7 +338,7 @@ export default function VerifyEmail() {
         </div>
       </header>
       <AnimatedPage className="flex flex-1 items-center justify-center p-4">
-        <Card className="w-full max-w-lg shadow-card">
+        <Card className="w-full max-w-lg rounded-[18px] shadow-card border-border">
           <CardHeader className="space-y-4">
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
               <Mail className="h-7 w-7 text-primary" aria-hidden />
@@ -360,7 +360,7 @@ export default function VerifyEmail() {
               <p className="font-medium text-foreground">Live status</p>
               <p>
                 {status === "verified"
-                  ? "Your email has been verified. Redirecting to dashboard…"
+                  ? "Your email has been verified. Redirecting to sign in…"
                   : status === "pending"
                     ? "Waiting for verification. We check every 15 seconds."
                     : "Verification failed. Please try again or contact support."}

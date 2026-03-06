@@ -98,10 +98,10 @@ export default function AboutHelp() {
             </span>
             <div className="flex gap-6">
               <Link
-                to="/privacy"
+                to="/privacy-policy"
                 className="text-sm text-muted-foreground transition-colors hover:text-foreground"
               >
-                Privacy
+                Privacy Policy
               </Link>
               <Link
                 to="/terms"

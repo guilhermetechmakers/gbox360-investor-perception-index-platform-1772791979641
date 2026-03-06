@@ -40,15 +40,15 @@ export default function ForgotPassword() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-[rgb(var(--hero-bg))]">
-      <header className="border-b border-border bg-card py-4">
+    <div className="min-h-screen flex flex-col bg-[rgb(var(--page-bg))]">
+      <header className="border-b border-border bg-card py-4 shadow-sm">
         <div className="container flex items-center justify-between px-4">
           <Link to="/" className="font-display text-xl font-semibold text-foreground">
             Gbox360
           </Link>
           <Link
             to="/auth"
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground min-h-[44px] items-center"
           >
             <ArrowLeft className="h-4 w-4" aria-hidden />
             Back to log in
@@ -56,7 +56,7 @@ export default function ForgotPassword() {
         </div>
       </header>
       <AnimatedPage className="flex flex-1 items-center justify-center p-4">
-        <Card className="w-full max-w-md shadow-card">
+        <Card className="w-full max-w-md rounded-[18px] shadow-card border-border transition-all duration-300 hover:shadow-[0_8px_28px_rgba(0,0,0,0.08)]">
           <CardHeader>
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
               {submitted ? (
