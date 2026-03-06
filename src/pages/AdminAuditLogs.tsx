@@ -57,6 +57,7 @@ export default function AdminAuditLogs() {
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
   const [payloadId, setPayloadId] = useState<string | null>(null)
+  const [exportFormat, setExportFormat] = useState<"csv" | "json">("csv")
   const [archivePage, setArchivePage] = useState(1)
   const [archivePageSize] = useState(25)
   const [archiveEventIdFilter, setArchiveEventIdFilter] = useState("")
@@ -113,8 +114,9 @@ export default function AdminAuditLogs() {
       tenantId: tenantId || undefined,
       actor: debouncedActor || undefined,
       search: debouncedSearch || undefined,
+      format: exportFormat,
     }),
-    [start, end, eventTypes, tenantId, debouncedActor, debouncedSearch]
+    [start, end, eventTypes, tenantId, debouncedActor, debouncedSearch, exportFormat]
   )
 
   const toggleEventType = (type: AuditLogEventType) => {
@@ -311,12 +313,27 @@ export default function AdminAuditLogs() {
                 {count} result(s). Click payload reference to view raw payload.
               </CardDescription>
             </div>
-            <CSVExportButton
-              onExport={handleExport}
-              status={exportStatus}
-              params={exportParams}
-              disabled={logs.length === 0}
-            />
+            <div className="flex flex-wrap items-center gap-2">
+              <Select
+                value={exportFormat}
+                onValueChange={(v) => setExportFormat(v as "csv" | "json")}
+                aria-label="Export format"
+              >
+                <SelectTrigger className="w-28" id="export-format">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="csv">CSV</SelectItem>
+                  <SelectItem value="json">JSON</SelectItem>
+                </SelectContent>
+              </Select>
+              <CSVExportButton
+                onExport={handleExport}
+                status={exportStatus}
+                params={exportParams}
+                disabled={logs.length === 0}
+              />
+            </div>
           </CardHeader>
           <CardContent>
             {isLoading ? (
@@ -346,6 +363,7 @@ export default function AdminAuditLogs() {
                           <th className="p-3 text-left font-medium" scope="col">Tenant</th>
                           <th className="p-3 text-left font-medium" scope="col">Event ID</th>
                           <th className="p-3 text-left font-medium" scope="col">Payload ID</th>
+                          <th className="p-3 text-left font-medium" scope="col">Payload hash</th>
                           <th className="p-3 text-left font-medium" scope="col">Description</th>
                           <th className="p-3 text-left font-medium" scope="col">Retention</th>
                           <th className="p-3 text-left font-medium" scope="col">Payload</th>
@@ -533,6 +551,7 @@ function AuditLogRow({ log, onViewPayload }: AuditLogRowProps) {
   const tenant = log.tenant_name ?? log.tenantId ?? "—"
   const eventId = log.event_id ?? "—"
   const payloadId = log.payload_id ?? log.payloadRef ?? "—"
+  const payloadHash = log.payloadHash ?? "—"
   const description = log.description ?? "—"
   const retention = log.retention_status ?? "—"
   const hasPayload = log.raw_payload_present ?? !!log.payloadRef
@@ -565,6 +584,9 @@ function AuditLogRow({ log, onViewPayload }: AuditLogRowProps) {
         )}
       </td>
       <td className="p-3 font-mono text-xs" role="cell">{payloadId}</td>
+      <td className="max-w-[120px] truncate p-3 font-mono text-xs" role="cell" title={payloadHash !== "—" ? payloadHash : undefined}>
+        {payloadHash}
+      </td>
       <td className="max-w-[200px] p-3" role="cell">
         <span title={descTruncated ? String(description) : undefined}>
           {descDisplay}

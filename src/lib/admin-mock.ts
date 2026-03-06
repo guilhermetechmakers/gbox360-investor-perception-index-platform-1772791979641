@@ -36,6 +36,7 @@ function toAuditLog(e: AuditLogEntry): AuditLog {
     retention_status: e.retention_status,
     payload_reference_uri: e.payload_reference_uri,
     raw_payload_present: e.raw_payload_present,
+    payloadHash: e.payload_hash,
   }
 }
 
@@ -68,6 +69,10 @@ export const mockDashboardHealth: DashboardHealth = {
     ingestionQueueLength: 12,
     workerStatus: "HEALTHY",
     lastSuccessfulJobAt: new Date().toISOString(),
+    uptime: 99.8,
+    errorRate: 0.2,
+    latencyMs: 145,
+    ingestionStatus: "healthy",
   },
   tenants: MOCK_TENANTS,
   alerts: [
@@ -102,6 +107,7 @@ const mockAuditEntries: AuditLogEntry[] = [
     retention_status: "RETAINED",
     payload_reference_uri: "s3://bucket/evt-001.json",
     raw_payload_present: true,
+    payload_hash: "sha256-a1b2c3d4",
   },
   {
     id: "log2",
@@ -117,6 +123,7 @@ const mockAuditEntries: AuditLogEntry[] = [
     retention_status: "RETAINED",
     payload_reference_uri: "s3://bucket/evt-002.json",
     raw_payload_present: true,
+    payload_hash: "sha256-e5f6g7h8",
   },
   {
     id: "log3",

@@ -93,6 +93,8 @@ export interface AuditLogEntry {
   raw_payload_present: boolean
   /** Alias for raw_payload_present */
   payload_present?: boolean
+  /** Optional hash for integrity checks */
+  payload_hash?: string
 }
 
 /** Legacy shape for backward compatibility with API responses */
@@ -114,6 +116,10 @@ export interface AuditLog {
   retention_status?: string
   payload_reference_uri?: string
   raw_payload_present?: boolean
+  /** Hash of payload for integrity checks. Optional. */
+  payloadHash?: string
+  /** Short preview of payload (e.g. first 200 chars). Optional. */
+  payloadPreview?: string
 }
 
 export interface IngestionEvent {
@@ -148,6 +154,14 @@ export interface SystemHealth {
   ingestionQueueLength: number
   workerStatus: WorkerStatus
   lastSuccessfulJobAt: string | null
+  /** Ingestion uptime percentage (0–100). Optional from API. */
+  uptime?: number
+  /** Error rate (e.g. errors per 1k events). Optional from API. */
+  errorRate?: number
+  /** P95 latency in ms. Optional from API. */
+  latencyMs?: number
+  /** Status label for ingestion pipeline. Optional. */
+  ingestionStatus?: "healthy" | "degraded" | "down"
 }
 
 export interface DashboardHealth {
@@ -195,6 +209,8 @@ export interface AuditLogExportParams {
   tenantId?: string
   actor?: string
   search?: string
+  /** Export format: CSV or JSON */
+  format?: "csv" | "json"
 }
 
 export interface AuditLogExportResponse {

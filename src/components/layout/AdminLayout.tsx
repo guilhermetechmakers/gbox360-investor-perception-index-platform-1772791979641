@@ -17,7 +17,7 @@ import { AdminRouteGuard } from "@/components/admin/AdminRouteGuard"
 import { useSignOut } from "@/hooks/useAuth"
 
 const adminNavItems = [
-  { to: "/admin-dashboard", label: "Admin Dashboard", icon: LayoutDashboard },
+  { to: "/admin", label: "Admin Dashboard", icon: LayoutDashboard },
   { to: "/admin/audit-logs", label: "Audit Logs", icon: FileText },
   { to: "/admin/data-replay", label: "Data Replay", icon: RotateCcw },
   { to: "/admin/user-management", label: "User Management", icon: Users },
@@ -48,7 +48,7 @@ export function AdminLayout() {
         >
           <div className="flex h-14 items-center justify-between border-b border-border px-4">
             {!collapsed && (
-              <Link to="/admin-dashboard" className="flex items-center gap-2 font-display text-lg font-semibold">
+              <Link to="/admin" className="flex items-center gap-2 font-display text-lg font-semibold">
                 <Shield className="h-5 w-5 text-primary" />
                 Admin
               </Link>
@@ -109,7 +109,7 @@ export function AdminLayout() {
           <Button variant="ghost" size="icon" onClick={() => setMobileOpen(!mobileOpen)} aria-label="Open menu">
             <Menu className="h-5 w-5" />
           </Button>
-          <Link to="/admin-dashboard" className="flex items-center gap-2 font-display text-lg font-semibold">
+          <Link to="/admin" className="flex items-center gap-2 font-display text-lg font-semibold">
             <Shield className="h-5 w-5 text-primary" />
             Admin
           </Link>

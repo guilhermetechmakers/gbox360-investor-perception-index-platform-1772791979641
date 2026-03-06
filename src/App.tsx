@@ -77,15 +77,14 @@ function App() {
             <Route path="subscription-management/checkout" element={<SubscriptionCheckout />} />
             <Route path="subscription-management/invoices" element={<TransactionHistory />} />
           </Route>
-          <Route path="/admin-dashboard" element={<AdminLayout />}>
-            <Route index element={<AdminDashboard />} />
-          </Route>
           <Route path="/admin" element={<AdminLayout />}>
+            <Route index element={<AdminDashboard />} />
             <Route path="audit-logs" element={<AdminAuditLogs />} />
             <Route path="data-replay" element={<AdminDataReplay />} />
             <Route path="drilldown/:eventId" element={<AdminDrilldown />} />
             <Route path="user-management" element={<AdminUserManagement />} />
           </Route>
+          <Route path="/admin-dashboard" element={<Navigate to="/admin" replace />} />
           <Route path="/404" element={<NotFound />} />
           <Route path="/500" element={<ServerError500 />} />
           <Route path="*" element={<Navigate to="/404" replace />} />

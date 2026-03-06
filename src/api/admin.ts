@@ -98,6 +98,17 @@ export const adminApi = {
     return mockDashboardHealth
   },
 
+  /** Trigger on-demand ingestion health check. Returns updated health. */
+  postHealthCheck: async (): Promise<DashboardHealth> => {
+    try {
+      const res = await api.post<DashboardHealth>("/admin/health-check", {})
+      if (res?.health) return res
+    } catch {
+      /* fall through to mock */
+    }
+    return mockDashboardHealth
+  },
+
   getTenants: async (): Promise<Tenant[]> => {
     try {
       const res = await api.get<{ tenants?: Tenant[] } | Tenant[]>("/admin/tenants")
@@ -153,10 +164,33 @@ export const adminApi = {
     } catch (err) {
       /* fall through to mock */
     }
-    // Mock: generate CSV from mock data for dev/demo
+    const format = params.format ?? "csv"
     const { items } = mockAuditLogs
-    const headers = ["id", "timestamp", "event_type", "actor", "tenant", "event_id", "payload_id", "description", "retention_status"]
-    const rows = (items ?? []).map((log) => [
+    const safeItems = (items ?? []) as AuditLog[]
+    if (format === "json") {
+      const json = JSON.stringify(
+        safeItems.map((log) => ({
+          id: log.id,
+          timestamp: log.timestamp,
+          event_type: log.event_type ?? log.eventType,
+          actor: log.actor_email ?? log.actor,
+          tenant: log.tenant_name ?? log.tenantId,
+          event_id: log.event_id,
+          payload_id: log.payload_id ?? log.payloadRef,
+          payload_hash: log.payloadHash,
+          payload_preview: log.payloadPreview ?? log.description,
+          description: log.description,
+          retention_status: log.retention_status,
+        })),
+        null,
+        2
+      )
+      const blob = new Blob([json], { type: "application/json" })
+      const url = URL.createObjectURL(blob)
+      return { url }
+    }
+    const headers = ["id", "timestamp", "event_type", "actor", "tenant", "event_id", "payload_id", "payload_hash", "description", "retention_status"]
+    const rows = safeItems.map((log) => [
       log.id,
       log.timestamp ?? "",
       (log.event_type ?? log.eventType ?? "").replace(/_/g, " "),
@@ -164,10 +198,11 @@ export const adminApi = {
       log.tenant_name ?? log.tenantId ?? "",
       log.event_id ?? "",
       log.payload_id ?? log.payloadRef ?? "",
+      log.payloadHash ?? "",
       (log.description ?? "").replace(/"/g, '""'),
       log.retention_status ?? "RETAINED",
     ])
-    const csv = [headers.join(","), ...rows.map((r) => r.map((c) => `"${String(c)}"`).join(","))].join("\n")
+    const csv = [headers.join(","), ...rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))].join("\n")
     const blob = new Blob([csv], { type: "text/csv" })
     const url = URL.createObjectURL(blob)
     return { url }

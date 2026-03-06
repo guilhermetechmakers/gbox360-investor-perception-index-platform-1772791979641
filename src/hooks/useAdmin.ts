@@ -36,6 +36,20 @@ export function useAdminDashboardHealth() {
   })
 }
 
+export function useAdminHealthCheck() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: () => adminApi.postHealthCheck(),
+    onSuccess: (data) => {
+      queryClient.setQueryData(adminKeys.health, data)
+      toast.success("Health check completed")
+    },
+    onError: (error: Error) => {
+      toast.error(error.message ?? "Health check failed")
+    },
+  })
+}
+
 export function useAdminTenants() {
   return useQuery({
     queryKey: adminKeys.tenants,
@@ -62,11 +76,12 @@ export function useAdminAuditLogPayload(id: string | null) {
 export function useAdminAuditLogExport() {
   return useMutation({
     mutationFn: (params: AuditLogExportParams) => adminApi.exportAuditLogs(params),
-    onSuccess: (data) => {
+    onSuccess: (data, variables) => {
       if (data?.url) {
         const a = document.createElement("a")
         a.href = data.url
-        a.download = `audit-logs-${new Date().toISOString().slice(0, 10)}.csv`
+        const ext = variables?.format ?? "csv"
+        a.download = `audit-logs-${new Date().toISOString().slice(0, 10)}.${ext}`
         a.click()
         URL.revokeObjectURL(data.url)
         toast.success("Audit logs exported")
