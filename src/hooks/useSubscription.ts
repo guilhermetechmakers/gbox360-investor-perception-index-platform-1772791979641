@@ -120,3 +120,34 @@ export function useSetDefaultPaymentMethod() {
     },
   })
 }
+
+export function useApplyPromo() {
+  return useMutation({
+    mutationFn: (params: {
+      code: string
+      planId: string
+      billingPeriod: "monthly" | "annual"
+    }) => subscriptionApi.applyPromo(params),
+  })
+}
+
+export function useCreateSubscription() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (params: {
+      planId: string
+      billingPeriod: "monthly" | "annual"
+      paymentMethod?: { last4: string; brand: string; expMonth: number; expYear: number }
+      promoCode?: string
+      enterpriseInvoice?: boolean
+      billingDetails?: import("@/types/subscription").BillingDetails
+      invoiceDetails?: import("@/types/subscription").InvoiceDetails
+      metadata?: Record<string, unknown>
+    }) => subscriptionApi.createSubscription(params),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: subscriptionKeys.current() })
+      qc.invalidateQueries({ queryKey: subscriptionKeys.invoices() })
+      qc.invalidateQueries({ queryKey: subscriptionKeys.payments() })
+    },
+  })
+}

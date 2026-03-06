@@ -46,7 +46,7 @@ function getTenantNames(u: AdminUser): string {
   return tenants
     .map((t) => ("tenantName" in t ? t.tenantName : "name" in t ? (t as { name?: string }).name : ""))
     .filter(Boolean)
-    .join(";") || u.tenantId ?? ""
+    .join(";") || u.tenantId || ""
 }
 
 function usersToCSV(users: AdminUser[]): string {
@@ -233,8 +233,15 @@ export const adminApi = {
   },
 
   inviteUser: async (input: InviteUserInput): Promise<{ id: string }> => {
-    const res = await api.post<{ id: string }>("/admin/invitations", input)
-    return res ?? { id: "" }
+    try {
+      const res = await api.post<{ id: string }>("/admin/invitations", input)
+      return res ?? { id: "" }
+    } catch {
+      if (import.meta.env.DEV) {
+        return { id: `inv-${Date.now()}` }
+      }
+      throw new Error("Failed to send invitation")
+    }
   },
 
   deactivateUser: async (id: string): Promise<void> => {
@@ -286,11 +293,12 @@ export const adminApi = {
     } catch {
       /* fall through to mock */
     }
-    const { items } = await getMockUsersResponse(params)
+    const { items = [] } = await getMockUsersResponse(params)
+    const safeItems = safeArray(items)
     const format = params.format ?? "csv"
     const blob = format === "json"
-      ? new Blob([JSON.stringify(items, null, 2)], { type: "application/json" })
-      : new Blob([usersToCSV(items)], { type: "text/csv" })
+      ? new Blob([JSON.stringify(safeItems, null, 2)], { type: "application/json" })
+      : new Blob([usersToCSV(safeItems)], { type: "text/csv" })
     const url = URL.createObjectURL(blob)
     return { url }
   },

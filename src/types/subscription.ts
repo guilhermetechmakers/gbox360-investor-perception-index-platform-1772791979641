@@ -20,9 +20,48 @@ export interface Plan {
   price: number
   currency: string
   interval: BillingInterval
+  priceMonthly?: number
+  priceAnnual?: number
   features: string[]
   quotas: PlanQuotas
+  entitlements?: string[]
   prorationPolicy?: string
+}
+
+export interface BillingDetails {
+  contactName: string
+  email: string
+  companyName?: string
+  address?: string
+  city?: string
+  state?: string
+  zip?: string
+  country?: string
+  taxId?: string
+}
+
+export interface InvoiceDetails {
+  recipientName: string
+  companyName: string
+  billingAddress: string
+  poNumber?: string
+  paymentTerms?: string
+}
+
+export interface CardFields {
+  cardNumber: string
+  expiry: string
+  cvc: string
+  nameOnCard: string
+}
+
+export interface PromoResult {
+  valid: boolean
+  code: string
+  discountType?: "percent" | "fixed"
+  value?: number
+  newTotal?: number
+  message?: string
 }
 
 export interface Subscription {

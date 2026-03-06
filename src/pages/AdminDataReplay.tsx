@@ -25,6 +25,7 @@ import {
   useAdminDataReplayJobProgress,
   useAdminDataReplayAuditLogs,
 } from "@/hooks/useAdmin"
+import type { PreflightResult, DryRunResult } from "@/types/admin"
 import { safeArray } from "@/lib/data-guard"
 import { format, subDays } from "date-fns"
 import { RotateCcw } from "lucide-react"
@@ -42,7 +43,7 @@ export default function AdminDataReplay() {
   const defaultWindow = getDefaultTimeWindow()
   const [tenantId, setTenantId] = useState<string>("")
   const [timeWindow, setTimeWindow] = useState<TimeWindow>(defaultWindow)
-  const [dryRunResult, setDryRunResult] = useState<import("@/types/admin").PreflightResult | import("@/types/admin").DryRunResult | null>(null)
+  const [dryRunResult, setDryRunResult] = useState<PreflightResult | DryRunResult | null>(null)
   const [activeJobId, setActiveJobId] = useState<string | null>(null)
 
   const { data: tenants = [] } = useAdminTenants()
@@ -136,7 +137,8 @@ export default function AdminDataReplay() {
   const etaSeconds = (progressData as { etaSeconds?: number })?.etaSeconds
   const currentBatch = (progressData as { currentBatch?: number })?.currentBatch
 
-  const preflightData = preflightMutation.data ?? dryRunResult
+  const preflightData: PreflightResult | DryRunResult | null | undefined =
+    preflightMutation.data ?? dryRunResult
 
   return (
     <DataAccessGuard permission="audit_logs">
@@ -218,8 +220,8 @@ export default function AdminDataReplay() {
               <DryRunLog result={preflightData ?? dryRunResult} />
               <ResourceEstimator
                 resources={
-                  (preflightData as import("@/types/admin").PreflightResult)?.estimatedResources ??
-                  (dryRunResult as import("@/types/admin").DryRunResult)?.estimatedResources
+                  (preflightData as PreflightResult)?.estimatedResources ??
+                  (dryRunResult as DryRunResult)?.estimatedResources
                 }
               />
             </div>

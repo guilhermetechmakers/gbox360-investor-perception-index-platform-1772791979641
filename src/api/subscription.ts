@@ -12,7 +12,11 @@ import type {
   SubscriptionResponse,
   PaymentMethod,
   Invoice,
+  InvoiceLineItem,
   ProrationInfo,
+  BillingDetails,
+  InvoiceDetails,
+  PromoResult,
 } from "@/types/subscription"
 
 const BASE = "/subscription"
@@ -23,7 +27,10 @@ const MOCK_PLAN: Plan = {
   price: 99,
   currency: "USD",
   interval: "monthly",
+  priceMonthly: 99,
+  priceAnnual: 990,
   features: ["10 companies monitored", "5,000 API calls/month", "5 team seats"],
+  entitlements: ["Full IPI access", "Priority support", "Export reports"],
   quotas: { seats: 5, apiCalls: 5000 },
 }
 
@@ -49,9 +56,38 @@ const MOCK_INVOICES: Invoice[] = [
 ]
 
 const MOCK_PLANS: Plan[] = [
-  { id: "starter", name: "Starter", price: 29, currency: "USD", interval: "monthly", features: ["3 companies", "1,000 API calls"], quotas: { seats: 1, apiCalls: 1000 } },
-  MOCK_PLAN,
-  { id: "enterprise", name: "Enterprise", price: 299, currency: "USD", interval: "monthly", features: ["Unlimited companies", "50,000 API calls", "20 seats"], quotas: { seats: 20, apiCalls: 50000 } },
+  {
+    id: "starter",
+    name: "Starter",
+    price: 29,
+    currency: "USD",
+    interval: "monthly",
+    priceMonthly: 29,
+    priceAnnual: 290,
+    features: ["3 companies monitored", "1,000 API calls/month", "1 team seat"],
+    entitlements: ["Basic IPI access", "Email support"],
+    quotas: { seats: 1, apiCalls: 1000 },
+  },
+  {
+    ...MOCK_PLAN,
+    priceMonthly: 99,
+    priceAnnual: 990,
+    features: ["10 companies monitored", "5,000 API calls/month", "5 team seats"],
+    entitlements: ["Full IPI access", "Priority support", "Export reports"],
+    quotas: { seats: 5, apiCalls: 5000 },
+  },
+  {
+    id: "enterprise",
+    name: "Enterprise",
+    price: 299,
+    currency: "USD",
+    interval: "monthly",
+    priceMonthly: 299,
+    priceAnnual: 2990,
+    features: ["Unlimited companies", "50,000 API calls/month", "20 team seats"],
+    entitlements: ["Full IPI access", "Dedicated support", "Custom integrations", "SLA"],
+    quotas: { seats: 20, apiCalls: 50000 },
+  },
 ]
 
 export const subscriptionApi = {
@@ -194,6 +230,111 @@ export const subscriptionApi = {
       return getArrayFromResponse({ data: res?.plans })
     } catch {
       return MOCK_PLANS
+    }
+  },
+
+  /** POST apply promo code */
+  async applyPromo(params: {
+    code: string
+    planId: string
+    billingPeriod: "monthly" | "annual"
+  }): Promise<PromoResult> {
+    try {
+      return await api.post<PromoResult>(`${BASE}/promos/apply`, params)
+    } catch {
+      const plan = MOCK_PLANS.find((p) => p.id === params.planId)
+      const basePrice =
+        params.billingPeriod === "annual"
+          ? plan?.priceAnnual ?? (plan?.price ?? 0) * 12
+          : plan?.priceMonthly ?? plan?.price ?? 0
+      const code = (params.code ?? "").toUpperCase()
+      if (code === "WELCOME10") {
+        return {
+          valid: true,
+          code: params.code,
+          discountType: "percent",
+          value: 10,
+          newTotal: basePrice * 0.9,
+          message: "10% discount applied",
+        }
+      }
+      return {
+        valid: false,
+        code: params.code,
+        message: "Invalid or expired promo code",
+      }
+    }
+  },
+
+  /** POST create subscription */
+  async createSubscription(params: {
+    planId: string
+    billingPeriod: "monthly" | "annual"
+    paymentMethod?: { last4: string; brand: string; expMonth: number; expYear: number }
+    promoCode?: string
+    enterpriseInvoice?: boolean
+    billingDetails?: BillingDetails
+    invoiceDetails?: InvoiceDetails
+    metadata?: Record<string, unknown>
+  }): Promise<{ subscription: Subscription; invoice?: Invoice }> {
+    try {
+      return await api.post<{ subscription: Subscription; invoice?: Invoice }>(
+        `${BASE}/subscriptions`,
+        params
+      )
+    } catch {
+      const plan = MOCK_PLANS.find((p) => p.id === params.planId) ?? MOCK_PLAN
+      const price =
+        params.billingPeriod === "annual"
+          ? plan.priceAnnual ?? plan.price * 12
+          : plan.priceMonthly ?? plan.price
+      return {
+        subscription: {
+          ...MOCK_SUBSCRIPTION,
+          planId: plan.id,
+          price,
+          billingMetadata: params.metadata,
+        },
+      }
+    }
+  },
+
+  /** POST create invoice (enterprise) */
+  async createInvoice(params: {
+    subscriptionId: string
+    billingDetails: BillingDetails
+    invoiceDetails: InvoiceDetails
+    lineItems?: { description: string; amount: number }[]
+  }): Promise<{ invoice: Invoice; pdfUrl?: string }> {
+    try {
+      return await api.post<{ invoice: Invoice; pdfUrl?: string }>(
+        `${BASE}/invoices`,
+        params
+      )
+    } catch {
+      const items = params.lineItems ?? []
+      const total = items.reduce(
+        (a, i) => a + (i.amount ?? 0) * 1,
+        0
+      )
+      return {
+        invoice: {
+          id: `inv-${Date.now()}`,
+          subscriptionId: params.subscriptionId,
+          amountDue: total,
+          currency: "USD",
+          status: "unpaid",
+          dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+          issuedAt: new Date().toISOString(),
+          pdfUrl: "#",
+          lineItems: items.map((i): InvoiceLineItem => ({
+            description: i.description ?? "",
+            amount: i.amount ?? 0,
+            quantity: 1,
+          })),
+        },
+        pdfUrl: "#",
+      }
     }
   },
 }

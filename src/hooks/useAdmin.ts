@@ -148,7 +148,6 @@ export function useAdminUserReactivate() {
 }
 
 export function useAdminUserResetPassword() {
-  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => adminApi.resetPassword(id),
     onSuccess: () => {
@@ -164,11 +163,12 @@ export function useAdminUserExport() {
   return useMutation({
     mutationFn: (params: AdminUsersParams & { format?: "csv" | "json" }) =>
       adminApi.exportUsers(params),
-    onSuccess: (data) => {
+    onSuccess: (data, variables) => {
       if (data?.url) {
+        const ext = variables?.format ?? "csv"
         const a = document.createElement("a")
         a.href = data.url
-        a.download = `users-export-${new Date().toISOString().slice(0, 10)}.${data.url.endsWith("json") ? "json" : "csv"}`
+        a.download = `users-export-${new Date().toISOString().slice(0, 10)}.${ext}`
         a.click()
         URL.revokeObjectURL(data.url)
         toast.success("Users exported")
@@ -177,6 +177,19 @@ export function useAdminUserExport() {
     onError: (error: Error) => {
       toast.error(error.message ?? "Export failed")
     },
+  })
+}
+
+export function useAdminUserAuditTrail(params?: {
+  targetType?: "user"
+  targetId?: string
+  page?: number
+  pageSize?: number
+}) {
+  return useQuery({
+    queryKey: ["admin", "user-audit", params ?? {}],
+    queryFn: () => adminApi.getUserAuditTrail(params),
+    select: (data) => ({ items: safeArray(data?.items), count: data?.count ?? 0 }),
   })
 }
 

@@ -89,7 +89,7 @@ export function SubscriptionHeaderCard({
           </Button>
           <Button variant="secondary" asChild>
             <Link to="/dashboard/subscription-management/checkout">
-              Manage billing
+              Checkout / Manage billing
             </Link>
           </Button>
           {isCancelable && (
