@@ -1,6 +1,7 @@
 /**
  * Narrative types for Authority Weighting & Credibility Proxy
  * Canonical NarrativeEvent schema: immutable, append-only, supports explainability
+ * Topic Classification & Narrative Persistence types
  */
 
 export interface Speaker {
@@ -63,4 +64,112 @@ export interface NarrativeSummary {
   credibility_proxy: number
   event_count: number
   event_ids: string[]
+}
+
+/** NarrativeTopic with decay-weighted score (from fetchNarratives API) */
+export interface NarrativeTopicWithDecay {
+  id: string
+  name: string
+  weight: number
+  decay_lambda: number
+  lastUpdated: string
+  topEvents: Array<{
+    id: string
+    raw_text: string
+    source: string
+    speaker_entity: string
+    created_at: string
+    authority_weight: number
+    credibility_proxy: number
+  }>
+}
+
+/** Event for drill-down view */
+export interface NarrativeEventDetail {
+  id: string
+  narrative_id?: string
+  company_id: string
+  source: string
+  platform?: string
+  speaker_entity: string
+  speaker_role?: string
+  audience_class?: string
+  raw_text: string
+  created_at: string
+  authority_weight: number
+  credibility_proxy: number
+  decay_score: number
+  metadata?: Record<string, unknown>
+}
+
+/** Ingest event payload */
+export interface IngestEventPayload {
+  companyId: string
+  source?: string
+  platform?: string
+  speakerEntity?: string
+  speakerRole?: string
+  audienceClass?: string
+  text: string
+  timestamp?: string
+  metadata?: Record<string, unknown>
+}
+
+/** NarrativeTopic from DB / API (with optional decay fields) */
+export interface NarrativeTopic {
+  id: string
+  company_id: string
+  name: string
+  is_embedding_cluster: boolean
+  decay_lambda: number
+  current_weight: number
+  base_weight?: number
+  last_decay_time?: string
+  created_at: string
+  updated_at: string
+}
+
+/** Narrative with decay-weighted score for company view */
+export interface NarrativeWithDecay {
+  id: string
+  name: string
+  weight: number
+  decay_lambda: number
+  lastUpdated: string
+  topEvents: NarrativeEventSummary[]
+  is_embedding_cluster?: boolean
+  event_count?: number
+}
+
+/** Summary of a single event for lists */
+export interface NarrativeEventSummary {
+  id: string
+  source?: string
+  platform?: string
+  speaker_entity?: string
+  speaker_role?: string
+  raw_text: string
+  created_at: string
+  authority_weight?: number
+  credibility_proxy?: number
+  classification_rationale?: ClassificationRationale
+}
+
+/** Why an event was assigned to a topic */
+export interface ClassificationRationale {
+  rule_based?: { topic_id: string; topic_name: string; confidence: number; matched_keywords?: string[] }
+  embedding_proximity?: { narrative_id: string; similarity: number }
+}
+
+/** GET /api/narratives response item */
+export interface NarrativeApiItem {
+  id: string
+  name: string
+  weight: number
+  decay_lambda: number
+  lastUpdated: string
+  topEvents: NarrativeEventSummary[]
+  event_count?: number
+  is_embedding_cluster?: boolean
+  updated_at?: string
 }

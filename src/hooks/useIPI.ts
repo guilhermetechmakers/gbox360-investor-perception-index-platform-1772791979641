@@ -126,3 +126,33 @@ export function useNarrativeById(id: string | null, enabled = true) {
     staleTime: 1000 * 60 * 2,
   })
 }
+
+/** Fetch narratives with decay-weighted scores (GET /narratives?companyId=&start=&end=). */
+export function useNarrativesWithDecay(
+  companyId: string,
+  start: string,
+  end: string,
+  enabled = true
+) {
+  return useQuery({
+    queryKey: ["narratives", "decay", companyId, start, end] as const,
+    queryFn: () => ipiApi.getNarrativesWithDecay(companyId, start, end),
+    enabled: !!companyId && !!start && !!end && enabled,
+    staleTime: 1000 * 60 * 2,
+  })
+}
+
+/** Fetch events for a narrative (GET /narratives/:id/events). */
+export function useNarrativeEvents(
+  narrativeId: string | null,
+  start: string,
+  end: string,
+  enabled = true
+) {
+  return useQuery({
+    queryKey: ["narratives", "events", narrativeId ?? "", start, end] as const,
+    queryFn: () => ipiApi.getNarrativeEvents(narrativeId!, start, end),
+    enabled: !!narrativeId && !!start && !!end && enabled,
+    staleTime: 1000 * 60 * 2,
+  })
+}

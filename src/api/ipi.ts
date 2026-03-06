@@ -9,7 +9,7 @@ import type {
   IPISandboxInput,
   IPISandboxResult,
 } from "@/types/ipi"
-import type { NarrativeSummary } from "@/types/narrative"
+import type { NarrativeSummary, NarrativeTopicWithDecay, NarrativeEventDetail } from "@/types/narrative"
 import type { NarrativeEvent, NarrativeEventCanonical } from "@/types/narrative"
 
 export const ipiApi = {
@@ -107,6 +107,46 @@ export const ipiApi = {
         `/narratives?${params.toString()}`
       )
       const list = Array.isArray(data) ? data : (data as { data?: NarrativeEvent[] })?.data
+      return Array.isArray(list) ? list : []
+    } catch {
+      return []
+    }
+  },
+
+  /**
+   * GET /narratives?companyId=&start=&end= — Narratives with decay-weighted scores.
+   */
+  getNarrativesWithDecay: async (
+    companyId: string,
+    start: string,
+    end: string
+  ): Promise<NarrativeTopicWithDecay[]> => {
+    try {
+      const params = new URLSearchParams({ companyId, start, end })
+      const data = await api.get<NarrativeTopicWithDecay[] | { data?: NarrativeTopicWithDecay[] }>(
+        `/narratives?${params.toString()}`
+      )
+      const list = Array.isArray(data) ? data : (data as { data?: NarrativeTopicWithDecay[] })?.data
+      return Array.isArray(list) ? list : []
+    } catch {
+      return []
+    }
+  },
+
+  /**
+   * GET /narratives/:id/events?start=&end= — Events for a narrative.
+   */
+  getNarrativeEvents: async (
+    narrativeId: string,
+    start: string,
+    end: string
+  ): Promise<NarrativeEventDetail[]> => {
+    try {
+      const params = new URLSearchParams({ start, end })
+      const data = await api.get<NarrativeEventDetail[] | { data?: NarrativeEventDetail[] }>(
+        `/narratives/${narrativeId}/events?${params.toString()}`
+      )
+      const list = Array.isArray(data) ? data : (data as { data?: NarrativeEventDetail[] })?.data
       return Array.isArray(list) ? list : []
     } catch {
       return []

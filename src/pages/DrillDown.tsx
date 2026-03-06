@@ -8,10 +8,12 @@ import {
   useIPIEvents,
   useIPICalculateQuery,
   useNarrativesByRange,
+  useNarrativesWithDecay,
 } from "@/hooks/useIPI"
 import { useCompany as useCompanyDetail } from "@/hooks/useCompanies"
 import { AnimatedPage } from "@/components/AnimatedPage"
 import { SandboxModal } from "@/components/ipi"
+import { NarrativeCard, DecayGauge } from "@/components/narrative"
 import { windowToDateRange } from "@/lib/date-utils"
 import {
   BarChart,
@@ -42,8 +44,14 @@ export default function DrillDown() {
   const { data: events } = useIPIEvents(id, validWindow)
   const { data: calculateResult } = useIPICalculateQuery(id, start, end)
   const { data: narrativesByRange } = useNarrativesByRange(id, start, end)
+  const { data: narrativesWithDecay } = useNarrativesWithDecay(
+    id,
+    `${start}T00:00:00.000Z`,
+    `${end}T23:59:59.999Z`
+  )
   const eventsList = Array.isArray(events) ? events : []
   const narrativesList = Array.isArray(narrativesByRange) ? narrativesByRange : []
+  const narrativesDecay = Array.isArray(narrativesWithDecay) ? narrativesWithDecay : []
   const explanationEvents = narrativesList.length > 0
     ? narrativesList.map((n) => ({
         event_id: "event_id" in n ? (n as { event_id: string }).event_id : (n as { id?: string }).id ?? "",
@@ -133,6 +141,28 @@ export default function DrillDown() {
             )}
           </CardContent>
         </Card>
+
+        {/* Narrative decay-weighted scores */}
+        {narrativesDecay.length > 0 && (
+          <Card className="rounded-2xl shadow-card">
+            <CardHeader>
+              <CardTitle>Narrative decay-weighted scores</CardTitle>
+              <CardDescription>
+                Per-narrative weights with exponential time decay. Click a card to view events.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {narrativesDecay.slice(0, 6).map((n) => (
+                  <div key={n.id} className="space-y-2">
+                    <NarrativeCard narrative={n} onViewDetails={() => {}} />
+                    <DecayGauge value={n.weight} max={10} label={n.name} />
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Replay controls */}
         <Card className="rounded-2xl shadow-card">

@@ -10,14 +10,16 @@ import {
   useIPICalculateQuery,
   useNarrativesByRange,
 } from "@/hooks/useIPI"
+import { useNarrativesWithDecay } from "@/hooks/useNarratives"
 import { useCompany as useCompanyDetail } from "@/hooks/useCompanies"
 import { AnimatedPage } from "@/components/AnimatedPage"
 import { CompanyTimeWindowSelect } from "@/components/dashboard/CompanyTimeWindowSelect"
 import { DateRangePicker, IPIBreakdownPanel, SandboxModal } from "@/components/ipi"
+import { NarrativeCard, DecayGauge, DrillDownPanel } from "@/components/narrative"
 import { useModals } from "@/components/modals"
 import { ipiApi } from "@/api/ipi"
 import { windowToDateRange } from "@/lib/date-utils"
-import type { NarrativeEvent } from "@/types/narrative"
+import type { NarrativeEvent, NarrativeWithDecay } from "@/types/narrative"
 import { ArrowDownRight, ArrowUpRight, Download, Flag, FileJson, Beaker } from "lucide-react"
 
 export default function CompanyView() {
@@ -35,6 +37,7 @@ export default function CompanyView() {
   const [dateStart, setDateStart] = useState(defaultStart)
   const [dateEnd, setDateEnd] = useState(defaultEnd)
   const [sandboxOpen, setSandboxOpen] = useState(false)
+  const [drillDownNarrative, setDrillDownNarrative] = useState<NarrativeWithDecay | null>(null)
 
   const handleExport = async () => {
     modals.showLoading({ title: "Exporting…", subtitle: "Preparing your export." })
@@ -84,6 +87,11 @@ export default function CompanyView() {
   const { data: company, isLoading: companyLoading } = useCompanyDetail(id)
   const { data: ipi, isLoading: ipiLoading } = useIPICurrent(id, validWindow)
   const { data: narrativesData, isLoading: narrativesLoading } = useTopNarratives(id, validWindow, 3)
+  const { data: narrativesWithDecayData, isLoading: narrativesWithDecayLoading } = useNarrativesWithDecay(
+    id,
+    dateStart,
+    dateEnd
+  )
   const { data: eventsData, isLoading: eventsLoading } = useIPIEvents(id, validWindow)
   const { data: narrativesByRangeData } = useNarrativesByRange(id, dateStart, dateEnd)
   const narrativesByRange = Array.isArray(narrativesByRangeData) ? narrativesByRangeData : []
@@ -96,7 +104,12 @@ export default function CompanyView() {
   const calculateResult = calculateQueryData ?? null
   const calculateLoading = calculateQueryLoading
 
+  const narrativesWithDecayList: NarrativeWithDecay[] = Array.isArray(narrativesWithDecayData)
+    ? narrativesWithDecayData
+    : []
+
   const narratives = Array.isArray(narrativesData) ? narrativesData : []
+  const topNarrativesDecay = narrativesWithDecayList.slice(0, 3)
   const events: NarrativeEvent[] =
     narrativesByRange.length > 0
       ? narrativesByRange.map((n: unknown) => {
@@ -251,19 +264,51 @@ export default function CompanyView() {
           isLoading={calculateLoading}
         />
 
-        {/* Top 3 narratives */}
+        {/* Decay-weighted narrative score */}
+        {topNarrativesDecay.length > 0 && (
+          <Card className="rounded-2xl shadow-card">
+            <CardHeader>
+              <CardTitle>Narrative decay-weighted score</CardTitle>
+              <CardDescription>
+                Current narrative presence with time decay. Higher = more recent/stronger signal.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <DecayGauge
+                value={topNarrativesDecay.reduce((a, n) => a + (Number(n.weight) ?? 0), 0) / Math.max(1, topNarrativesDecay.length)}
+                max={1}
+                label="Aggregate narrative weight"
+              />
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Top 3 contributing narratives */}
         <Card className="rounded-2xl shadow-card">
           <CardHeader>
             <CardTitle>Top contributing narratives</CardTitle>
-            <CardDescription>Summaries with authority and credibility.</CardDescription>
+            <CardDescription>
+              Why did this move? Click to drill down into underlying events and classification rationale.
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            {narrativesLoading ? (
+            {(narrativesLoading || narrativesWithDecayLoading) ? (
               <div className="space-y-2">
                 <Skeleton className="h-20 w-full" />
                 <Skeleton className="h-20 w-full" />
                 <Skeleton className="h-20 w-full" />
               </div>
+            ) : topNarrativesDecay.length > 0 ? (
+              <ul className="space-y-4">
+                {topNarrativesDecay.map((n) => (
+                  <li key={n.id}>
+                    <NarrativeCard
+                      narrative={n}
+                      onViewDetails={() => setDrillDownNarrative(n)}
+                    />
+                  </li>
+                ))}
+              </ul>
             ) : narratives.length > 0 ? (
               <ul className="space-y-4">
                 {narratives.map((n) => (
@@ -334,6 +379,15 @@ export default function CompanyView() {
         timeWindowStart={`${dateStart}T00:00:00.000Z`}
         timeWindowEnd={`${dateEnd}T23:59:59.999Z`}
         onRun={handleSandboxRun}
+      />
+
+      <DrillDownPanel
+        open={!!drillDownNarrative}
+        onOpenChange={(open) => !open && setDrillDownNarrative(null)}
+        narrative={drillDownNarrative}
+        companyId={id}
+        start={dateStart}
+        end={dateEnd}
       />
     </AnimatedPage>
   )
