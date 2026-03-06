@@ -95,3 +95,34 @@ export function useIPISandbox() {
     mutationFn: (input: IPISandboxInput) => ipiApi.sandbox(input),
   })
 }
+
+export const narrativesKeys = {
+  byRange: (companyId: string, start: string, end: string) =>
+    ["narratives", "range", companyId, start, end] as const,
+  byId: (id: string) => ["narratives", "id", id] as const,
+}
+
+/** Fetch narratives for company and date range (GET /narratives?companyId=&start=&end=). */
+export function useNarrativesByRange(
+  companyId: string,
+  start: string,
+  end: string,
+  enabled = true
+) {
+  return useQuery({
+    queryKey: narrativesKeys.byRange(companyId, start, end),
+    queryFn: () => ipiApi.getNarratives(companyId, start, end),
+    enabled: !!companyId && !!start && !!end && enabled,
+    staleTime: 1000 * 60 * 2,
+  })
+}
+
+/** Fetch single narrative by id (GET /narratives/:id). */
+export function useNarrativeById(id: string | null, enabled = true) {
+  return useQuery({
+    queryKey: narrativesKeys.byId(id ?? ""),
+    queryFn: () => ipiApi.getNarrativeById(id!),
+    enabled: !!id && enabled,
+    staleTime: 1000 * 60 * 2,
+  })
+}

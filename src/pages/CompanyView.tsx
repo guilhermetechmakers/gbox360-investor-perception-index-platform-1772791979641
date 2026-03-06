@@ -8,6 +8,7 @@ import {
   useTopNarratives,
   useIPIEvents,
   useIPICalculateQuery,
+  useNarrativesByRange,
 } from "@/hooks/useIPI"
 import { useCompany as useCompanyDetail } from "@/hooks/useCompanies"
 import { AnimatedPage } from "@/components/AnimatedPage"
@@ -16,6 +17,7 @@ import { DateRangePicker, IPIBreakdownPanel, SandboxModal } from "@/components/i
 import { useModals } from "@/components/modals"
 import { ipiApi } from "@/api/ipi"
 import { windowToDateRange } from "@/lib/date-utils"
+import type { NarrativeEvent } from "@/types/narrative"
 import { ArrowDownRight, ArrowUpRight, Download, Flag, FileJson, Beaker } from "lucide-react"
 
 export default function CompanyView() {
@@ -83,6 +85,8 @@ export default function CompanyView() {
   const { data: ipi, isLoading: ipiLoading } = useIPICurrent(id, validWindow)
   const { data: narrativesData, isLoading: narrativesLoading } = useTopNarratives(id, validWindow, 3)
   const { data: eventsData, isLoading: eventsLoading } = useIPIEvents(id, validWindow)
+  const { data: narrativesByRangeData } = useNarrativesByRange(id, dateStart, dateEnd)
+  const narrativesByRange = Array.isArray(narrativesByRangeData) ? narrativesByRangeData : []
 
   const { data: calculateQueryData, isLoading: calculateQueryLoading } = useIPICalculateQuery(
     id,
@@ -93,7 +97,30 @@ export default function CompanyView() {
   const calculateLoading = calculateQueryLoading
 
   const narratives = Array.isArray(narrativesData) ? narrativesData : []
-  const events = Array.isArray(eventsData) ? eventsData : []
+  const events: NarrativeEvent[] =
+    narrativesByRange.length > 0
+      ? narrativesByRange.map((n: unknown) => {
+          const x = n as Record<string, unknown>
+          return {
+            event_id: String(x?.event_id ?? x?.id ?? ""),
+            company_id: String(x?.company_id ?? ""),
+            source: String(x?.source ?? x?.source_platform ?? "—"),
+            platform: x?.platform as string | undefined,
+            speaker: {
+              entity: String(x?.speaker_entity ?? (x?.speaker as { entity?: string })?.entity ?? "—"),
+              inferred_role: (x?.speaker_role ?? (x?.speaker as { inferred_role?: string })?.inferred_role) as string | undefined,
+            },
+            raw_text: String(x?.raw_text ?? ""),
+            published_at: String(x?.published_at ?? x?.created_at ?? new Date().toISOString()),
+            ingested_at: String(x?.ingested_at ?? x?.created_at ?? new Date().toISOString()),
+            created_at: String(x?.created_at ?? new Date().toISOString()),
+            authority_score: Number(x?.authority_weight ?? x?.authority_score ?? 0),
+            authority_weight: Number(x?.authority_weight ?? 0),
+            credibility_proxy: Number(x?.credibility_proxy ?? 0),
+            narrative_topic_ids: Array.isArray(x?.narrative_topic_ids) ? (x.narrative_topic_ids as string[]) : [],
+          } as NarrativeEvent
+        })
+      : Array.isArray(eventsData) ? eventsData : []
 
   const handleWindowChange = (value: string) => {
     setSearchParams((prev) => {
