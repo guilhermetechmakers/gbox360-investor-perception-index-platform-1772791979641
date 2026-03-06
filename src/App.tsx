@@ -68,7 +68,9 @@ function App() {
             <Route index element={<Dashboard />} />
             <Route path="companies" element={<Companies />} />
             <Route path="company/:companyId" element={<CompanyView />} />
+            <Route path="company/:companyId/ipi" element={<CompanyView />} />
             <Route path="company/:companyId/drill-down" element={<DrillDown />} />
+            <Route path="company/:companyId/ipi/drilldown" element={<DrillDown />} />
             <Route path="payload/:eventId" element={<PayloadViewer />} />
             <Route path="profile" element={<UserProfile />} />
             <Route path="settings" element={<Settings />} />

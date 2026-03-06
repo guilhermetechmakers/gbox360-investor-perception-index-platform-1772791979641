@@ -4,8 +4,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
-  useIPICurrent,
-  useIPITimeseries,
   useTopNarratives,
   useIPIEvents,
   useIPICalculateQuery,
@@ -14,23 +12,36 @@ import {
 import { useNarrativesWithDecay } from "@/hooks/useNarratives"
 import { useCompany as useCompanyDetail } from "@/hooks/useCompanies"
 import { AnimatedPage } from "@/components/AnimatedPage"
+import {
+  CompanyViewIPISection,
+  TopNarrativesList,
+  NarrativeEventTimeline,
+  DrillDownExplainabilityPanel,
+  ExportButton,
+  AuditBadge,
+  SearchBar,
+} from "@/components/company-view"
 import { CompanyTimeWindowSelect } from "@/components/dashboard/CompanyTimeWindowSelect"
-import { DateRangePicker, IPIBadge, IPIBreakdownPanel, SandboxModal } from "@/components/ipi"
+import { DateRangePicker, IPIBreakdownPanel, SandboxModal } from "@/components/ipi"
 import { NarrativeCard, DecayGauge, DrillDownPanel } from "@/components/narrative"
-import { useModals } from "@/components/modals"
-import { ipiApi } from "@/api/ipi"
 import { windowToDateRange } from "@/lib/date-utils"
-import type { NarrativeEvent, NarrativeWithDecay } from "@/types/narrative"
-import { Download, Flag, FileJson, Beaker } from "lucide-react"
-import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts"
+import { mapEventsToViewList, mapNarrativesToViewList } from "@/lib/company-view-mappers"
+import { ipiApi } from "@/api/ipi"
+import type { NarrativeEventView, NarrativeSummaryView } from "@/types/company-view"
+import type { NarrativeWithDecay } from "@/types/narrative"
+import { Beaker } from "lucide-react"
+
+const VALID_WINDOWS = ["1D", "1W", "2W", "30d", "90d", "1M", "3M"]
+function normalizeWindow(w: string): string {
+  return VALID_WINDOWS.includes(w) ? w : "1W"
+}
 
 export default function CompanyView() {
   const { companyId } = useParams<{ companyId: string }>()
   const [searchParams, setSearchParams] = useSearchParams()
-  const modals = useModals()
   const id = companyId ?? ""
   const windowParam = searchParams.get("window") ?? "1W"
-  const validWindow = ["1D", "1W", "2W", "30d", "90d", "1M"].includes(windowParam) ? windowParam : "1W"
+  const validWindow = normalizeWindow(windowParam)
 
   const { start: defaultStart, end: defaultEnd } = useMemo(
     () => windowToDateRange(validWindow),
@@ -41,54 +52,7 @@ export default function CompanyView() {
   const [sandboxOpen, setSandboxOpen] = useState(false)
   const [drillDownNarrative, setDrillDownNarrative] = useState<NarrativeWithDecay | null>(null)
 
-  const handleExport = async () => {
-    modals.showLoading({ title: "Exporting…", subtitle: "Preparing your export." })
-    try {
-      const result = await ipiApi.requestExport(id, validWindow, "csv")
-      modals.hideLoading()
-      const exportUrl = (result?.url ?? "").trim()
-      const hasDownloadUrl = exportUrl && exportUrl !== "#"
-      modals.showSuccess({
-        title: "Export complete",
-        message: "Your IPI data has been exported successfully.",
-        primaryAction: hasDownloadUrl
-          ? {
-              label: "Download",
-              onClick: () => {
-                window.open(exportUrl, "_blank")
-                modals.hideSuccess()
-              },
-            }
-          : {
-              label: "Dismiss",
-              onClick: modals.hideSuccess,
-            },
-        secondaryAction: hasDownloadUrl
-          ? { label: "Dismiss", onClick: modals.hideSuccess }
-          : undefined,
-        showViewResults: false,
-        resultsHref: undefined,
-      })
-    } catch (err) {
-      modals.hideLoading()
-      modals.showError({
-        title: "Export failed",
-        errorMessage: err instanceof Error ? err.message : "Could not complete export.",
-        retryAction: {
-          label: "Retry",
-          onClick: () => {
-            modals.hideError()
-            handleExport()
-          },
-        },
-        supportLink: "/about-help",
-      })
-    }
-  }
-
   const { data: company, isLoading: companyLoading } = useCompanyDetail(id)
-  const { data: ipi, isLoading: ipiLoading } = useIPICurrent(id, validWindow)
-  const { data: timeseriesData } = useIPITimeseries(id, validWindow)
   const { data: narrativesData, isLoading: narrativesLoading } = useTopNarratives(id, validWindow, 3)
   const { data: narrativesWithDecayData, isLoading: narrativesWithDecayLoading } = useNarrativesWithDecay(
     id,
@@ -105,7 +69,6 @@ export default function CompanyView() {
     dateEnd
   )
   const calculateResult = calculateQueryData ?? null
-  const calculateLoading = calculateQueryLoading
 
   const narrativesWithDecayList: NarrativeWithDecay[] = Array.isArray(narrativesWithDecayData)
     ? narrativesWithDecayData
@@ -113,30 +76,34 @@ export default function CompanyView() {
 
   const narratives = Array.isArray(narrativesData) ? narrativesData : []
   const topNarrativesDecay = narrativesWithDecayList.slice(0, 3)
-  const events: NarrativeEvent[] =
-    narrativesByRange.length > 0
-      ? narrativesByRange.map((n: unknown) => {
-          const x = n as Record<string, unknown>
-          return {
-            event_id: String(x?.event_id ?? x?.id ?? ""),
-            company_id: String(x?.company_id ?? ""),
-            source: String(x?.source ?? x?.source_platform ?? "—"),
-            platform: x?.platform as string | undefined,
-            speaker: {
-              entity: String(x?.speaker_entity ?? (x?.speaker as { entity?: string })?.entity ?? "—"),
-              inferred_role: (x?.speaker_role ?? (x?.speaker as { inferred_role?: string })?.inferred_role) as string | undefined,
-            },
-            raw_text: String(x?.raw_text ?? ""),
-            published_at: String(x?.published_at ?? x?.created_at ?? new Date().toISOString()),
-            ingested_at: String(x?.ingested_at ?? x?.created_at ?? new Date().toISOString()),
-            created_at: String(x?.created_at ?? new Date().toISOString()),
-            authority_score: Number(x?.authority_weight ?? x?.authority_score ?? 0),
-            authority_weight: Number(x?.authority_weight ?? 0),
-            credibility_proxy: Number(x?.credibility_proxy ?? 0),
-            narrative_topic_ids: Array.isArray(x?.narrative_topic_ids) ? (x.narrative_topic_ids as string[]) : [],
-          } as NarrativeEvent
-        })
-      : Array.isArray(eventsData) ? eventsData : []
+
+  const narrativeSummariesForView: NarrativeSummaryView[] = useMemo(() => {
+    if (narrativesWithDecayList.length > 0) return mapNarrativesToViewList(narrativesWithDecayList)
+    return mapNarrativesToViewList(narratives)
+  }, [narrativesWithDecayList, narratives])
+
+  const eventsForTimeline: NarrativeEventView[] = useMemo(() => {
+    if (narrativesByRange.length > 0) {
+      return narrativesByRange.map((n: unknown) => {
+        const x = n as Record<string, unknown>
+        return {
+          id: String(x?.event_id ?? x?.id ?? ""),
+          companyId: String(x?.company_id ?? ""),
+          source: String(x?.source ?? x?.source_platform ?? "—"),
+          platform: x?.platform as string | undefined,
+          speaker: {
+            name: String(x?.speaker_entity ?? (x?.speaker as { entity?: string })?.entity ?? "—"),
+            role: String((x?.speaker_role ?? (x?.speaker as { inferred_role?: string })?.inferred_role) ?? ""),
+          },
+          text: String(x?.raw_text ?? ""),
+          timestamp: String(x?.published_at ?? x?.created_at ?? new Date().toISOString()),
+          amplitude: Number(x?.authority_weight ?? x?.authority_score ?? 0) || Number(x?.credibility_proxy ?? 0) || undefined,
+          whyIncluded: "Included based on narrative relevance and authority/credibility weighting.",
+        } as NarrativeEventView
+      })
+    }
+    return mapEventsToViewList(eventsData ?? [])
+  }, [narrativesByRange, eventsData])
 
   const handleWindowChange = (value: string) => {
     setSearchParams((prev) => {
@@ -175,11 +142,17 @@ export default function CompanyView() {
   return (
     <AnimatedPage>
       <div className="mx-auto max-w-[1000px] space-y-6">
-        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h1 className="font-display text-2xl font-semibold">
-              {company.name} ({company.ticker})
-            </h1>
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="font-display text-2xl font-semibold">
+                {company.name} ({company.ticker})
+              </h1>
+              <SearchBar
+                placeholder="Switch company…"
+                navigateOnSelect={true}
+              />
+            </div>
             <div className="mt-2 flex flex-wrap items-center gap-4">
               <CompanyTimeWindowSelect
                 value={validWindow}
@@ -191,11 +164,17 @@ export default function CompanyView() {
                 onStartChange={setDateStart}
                 onEndChange={setDateEnd}
               />
+              <AuditBadge
+                lastIngestionTime={(company as { lastIngestAt?: string }).lastIngestAt}
+                hasRawPayload
+              />
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
             <Link to={`/dashboard/company/${id}/drill-down?window=${validWindow}`}>
-              <Button variant="outline">Why did this move?</Button>
+              <Button variant="default" className="bg-primary hover:bg-primary/90">
+                Why did this move?
+              </Button>
             </Link>
             <Button
               variant="outline"
@@ -205,103 +184,18 @@ export default function CompanyView() {
               <Beaker className="h-4 w-4" />
               Sandbox
             </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              title="Export"
-              onClick={handleExport}
-            >
-              <Download className="h-4 w-4" />
-            </Button>
-            <Button variant="outline" size="icon" title="Flag">
-              <Flag className="h-4 w-4" />
-            </Button>
+            <ExportButton companyId={id} timeWindow={validWindow} />
           </div>
         </div>
 
-        {/* IPI card */}
-        <Card className="rounded-2xl shadow-card">
-          <CardHeader>
-            <CardTitle>Investor Perception Index</CardTitle>
-            <CardDescription>
-              0–100 scale. Provisional weights: Narrative 40%, Credibility 40%, Risk 20%.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {ipiLoading ? (
-              <Skeleton className="h-32 w-full" />
-            ) : ipi ? (
-              <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex flex-wrap items-center gap-6">
-                  <IPIBadge
-                    score={calculateResult?.totalScore ?? ipi.score}
-                    delta={ipi.delta}
-                    maxScore={100}
-                    size="lg"
-                    showDelta
-                  />
-                  <div className="text-sm text-muted-foreground">
-                    Narrative {(calculateResult?.narrativeScore ?? ipi.narrative_component)?.toFixed(1)} · Credibility{" "}
-                    {(calculateResult?.credibilityScore ?? ipi.credibility_component)?.toFixed(1)} · Risk{" "}
-                    {(calculateResult?.riskScore ?? ipi.risk_component)?.toFixed(1)}
-                  </div>
-                </div>
-                {Array.isArray(timeseriesData) && timeseriesData.length > 0 && (
-                  <div className="h-16 w-full min-w-[200px] max-w-[280px] sm:h-20">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart
-                        data={timeseriesData}
-                        margin={{ top: 4, right: 4, left: 4, bottom: 4 }}
-                      >
-                        <defs>
-                          <linearGradient id="ipiGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="rgb(var(--primary))" stopOpacity={0.4} />
-                            <stop offset="100%" stopColor="rgb(var(--primary))" stopOpacity={0.05} />
-                          </linearGradient>
-                        </defs>
-                        <XAxis
-                          dataKey="timestamp"
-                          hide
-                          tickFormatter={(v) => new Date(v).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
-                        />
-                        <YAxis hide domain={[0, 100]} />
-                        <Tooltip
-                          content={({ payload }) =>
-                            payload?.[0] ? (
-                              <div className="rounded-lg border border-border bg-card px-3 py-2 text-xs shadow-card">
-                                {new Date(payload[0].payload.timestamp).toLocaleDateString(undefined, {
-                                  month: "short",
-                                  day: "numeric",
-                                  year: "numeric",
-                                })}
-                                : {(payload[0].value as number)?.toFixed(1)} IPI
-                              </div>
-                            ) : null
-                          }
-                        />
-                        <Area
-                          type="monotone"
-                          dataKey="score"
-                          stroke="rgb(var(--primary))"
-                          strokeWidth={2}
-                          fill="url(#ipiGradient)"
-                        />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <p className="text-muted-foreground">No IPI data for this window.</p>
-            )}
-          </CardContent>
-        </Card>
+        <CompanyViewIPISection companyId={id} timeWindow={validWindow} />
 
-        {/* Breakdown panel */}
         <IPIBreakdownPanel
           result={calculateResult ?? null}
-          isLoading={calculateLoading}
+          isLoading={calculateQueryLoading}
         />
+
+        <DrillDownExplainabilityPanel companyId={id} timeWindow={validWindow} />
 
         {/* Decay-weighted narrative score */}
         {topNarrativesDecay.length > 0 && (
@@ -337,78 +231,32 @@ export default function CompanyView() {
                 <Skeleton className="h-20 w-full" />
                 <Skeleton className="h-20 w-full" />
               </div>
-            ) : topNarrativesDecay.length > 0 ? (
-              <ul className="space-y-4">
-                {topNarrativesDecay.map((n) => (
-                  <li key={n.id}>
-                    <NarrativeCard
-                      narrative={n}
-                      onViewDetails={() => setDrillDownNarrative(n)}
-                    />
-                  </li>
-                ))}
-              </ul>
-            ) : narratives.length > 0 ? (
-              <ul className="space-y-4">
-                {narratives.map((n) => (
-                  <li key={n.topic_id}>
-                    <Card className="border-l-4 border-l-primary transition-shadow hover:shadow-md">
-                      <CardContent className="py-4">
-                        <p className="font-medium">{n.summary}</p>
-                        <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
-                          <span>Authority: {(n.authority_weight * 100).toFixed(0)}%</span>
-                          <span>Credibility: {(n.credibility_proxy * 100).toFixed(0)}%</span>
-                          <span>{n.event_count} events</span>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </li>
-                ))}
-              </ul>
             ) : (
-              <p className="text-muted-foreground">No narratives for this window.</p>
+              <>
+                <TopNarrativesList narratives={narrativeSummariesForView} />
+                {narrativeSummariesForView.length === 0 && topNarrativesDecay.length > 0 && (
+                  <ul className="space-y-4 mt-4">
+                    {topNarrativesDecay.map((n) => (
+                      <li key={n.id}>
+                        <NarrativeCard
+                          narrative={n}
+                          onViewDetails={() => setDrillDownNarrative(n)}
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </>
             )}
           </CardContent>
         </Card>
 
         {/* Timeline / Events */}
-        <Card className="rounded-2xl shadow-card">
-          <CardHeader>
-            <CardTitle>Event timeline</CardTitle>
-            <CardDescription>
-              NarrativeEvents with provenance. View raw payload for audit.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {eventsLoading ? (
-              <Skeleton className="h-48 w-full" />
-            ) : events.length > 0 ? (
-              <div className="space-y-2">
-                {events.slice(0, 10).map((ev) => (
-                  <Card
-                    key={ev.event_id}
-                    className="flex items-center justify-between p-4 transition-shadow hover:shadow-md"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm">{ev.raw_text}</p>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {ev.source} · {ev.speaker?.entity ?? "—"} ·{" "}
-                        {new Date(ev.published_at).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <Link to={`/dashboard/payload/${ev.event_id}`}>
-                      <Button variant="ghost" size="sm">
-                        <FileJson className="h-4 w-4" />
-                      </Button>
-                    </Link>
-                  </Card>
-                ))}
-              </div>
-            ) : (
-              <p className="text-muted-foreground">No events in this window.</p>
-            )}
-          </CardContent>
-        </Card>
+        <NarrativeEventTimeline
+          events={eventsForTimeline}
+          isLoading={eventsLoading}
+          companyId={id}
+        />
       </div>
 
       <SandboxModal

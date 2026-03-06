@@ -14,6 +14,7 @@ export const TIME_WINDOW_OPTIONS = [
   { value: "30d", label: "30 Days" },
   { value: "90d", label: "90 Days" },
   { value: "1M", label: "1 Month" },
+  { value: "3M", label: "3 Months" },
 ] as const
 
 export type TimeWindowValue = (typeof TIME_WINDOW_OPTIONS)[number]["value"]

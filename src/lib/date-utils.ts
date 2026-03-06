@@ -19,6 +19,9 @@ export function windowToDateRange(window: string): { start: string; end: string 
     case "1M":
       start = subMonths(end, 1)
       break
+    case "3M":
+      start = subMonths(end, 3)
+      break
     case "1W":
     default:
       start = subWeeks(end, 1)
