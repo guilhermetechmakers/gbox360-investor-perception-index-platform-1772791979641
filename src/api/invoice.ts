@@ -1,6 +1,7 @@
 /**
  * Invoice API — endpoints for transaction history, filtering,
- * pagination, and downloads. All responses validated with safe defaults.
+ * pagination, and downloads. Uses /api/billing/invoices (aligns with Billing API).
+ * All responses validated with safe defaults.
  */
 
 import { api } from "@/lib/api"
@@ -10,7 +11,7 @@ import type {
   InvoiceListResponse,
 } from "@/types/invoice"
 
-const BASE = "/invoices"
+const BASE = "/billing/invoices"
 
 /** Mock data for MVP when backend is unavailable */
 function createMockInvoice(overrides: Partial<Invoice> = {}): Invoice {
