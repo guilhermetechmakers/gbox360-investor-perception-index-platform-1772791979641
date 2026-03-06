@@ -7,6 +7,8 @@ import type {
   ApiKeyCreateInput,
   DataRefreshUpdateInput,
   TeamInviteInput,
+  DeliveryWindowUpdateInput,
+  MutedNotificationsUpdateInput,
 } from "@/types/settings"
 import { safeArray } from "@/lib/data-guard"
 
@@ -29,6 +31,8 @@ export function useSettings() {
       dataRefresh: data.dataRefresh ?? null,
       team: isAdmin ? safeArray(data.team) : [],
       sessions: safeArray(data.sessions),
+      deliveryWindow: data.deliveryWindow ?? null,
+      mutedNotifications: data.mutedNotifications ?? null,
     }),
   })
 }
@@ -58,6 +62,34 @@ export function useSettingsNotificationsUpdate() {
     },
     onError: (error: Error) => {
       toast.error(error.message ?? "Failed to save notifications")
+    },
+  })
+}
+
+export function useSettingsDeliveryWindowUpdate() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (payload: DeliveryWindowUpdateInput) => settingsApi.updateDeliveryWindow(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: settingsKeys.settings })
+      toast.success("Delivery window saved")
+    },
+    onError: (error: Error) => {
+      toast.error(error.message ?? "Failed to save delivery window")
+    },
+  })
+}
+
+export function useSettingsMutedNotificationsUpdate() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (payload: MutedNotificationsUpdateInput) => settingsApi.updateMutedNotifications(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: settingsKeys.settings })
+      toast.success("Muted notifications updated")
+    },
+    onError: (error: Error) => {
+      toast.error(error.message ?? "Failed to update muted notifications")
     },
   })
 }

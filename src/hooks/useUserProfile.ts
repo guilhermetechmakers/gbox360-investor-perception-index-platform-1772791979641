@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { usersApi } from "@/api/users"
-import type { ProfileUpdatePayload } from "@/types/user-profile"
+import type { ProfileUpdatePayload, UserProfileMe } from "@/types/user-profile"
 import type { TeamInviteInput } from "@/types/settings"
 import { safeArray } from "@/lib/data-guard"
 import { settingsKeys } from "@/hooks/useSettings"
@@ -111,6 +111,25 @@ export function useRemoveTenantUser(tenantId: string) {
     },
     onError: (error: Error) => {
       toast.error(error.message ?? "Failed to remove user")
+    },
+  })
+}
+
+export function useAvatarUpload() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (file: File) => usersApi.uploadAvatar(file),
+    onSuccess: (url) => {
+      if (url) {
+        queryClient.setQueryData(userProfileKeys.me, (prev: UserProfileMe | null) =>
+          prev ? { ...prev, avatar_url: url } : null
+        )
+        queryClient.invalidateQueries({ queryKey: userProfileKeys.me })
+        toast.success("Avatar updated")
+      }
+    },
+    onError: () => {
+      toast.error("Failed to upload avatar")
     },
   })
 }

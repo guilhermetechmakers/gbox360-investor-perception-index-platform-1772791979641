@@ -117,6 +117,8 @@ export const mockSettingsPayload: SettingsPayload = {
   dataRefresh: mockDataRefresh,
   team: mockTeamMembers,
   sessions: mockSessions,
+  deliveryWindow: { start: "09:00", end: "18:00" },
+  mutedNotifications: null,
 }
 
 export const TIMEZONES = [

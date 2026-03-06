@@ -12,8 +12,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Bell, Mail, Webhook, MessageSquare } from "lucide-react"
-import { useSettings, useSettingsNotificationsUpdate } from "@/hooks/useSettings"
+import { Bell, Mail, Webhook, MessageSquare, Clock, BellOff } from "lucide-react"
+import { useSettings, useSettingsNotificationsUpdate, useSettingsDeliveryWindowUpdate, useSettingsMutedNotificationsUpdate } from "@/hooks/useSettings"
 import { useDebounce } from "@/hooks/useDebounce"
 import type { NotificationChannel, NotificationFrequency } from "@/types/settings"
 import { cn } from "@/lib/utils"
@@ -37,6 +37,8 @@ function isValidUrl(s: string): boolean {
 export function NotificationsPanel() {
   const { data, isLoading } = useSettings()
   const updateMutation = useSettingsNotificationsUpdate()
+  const deliveryWindowMutation = useSettingsDeliveryWindowUpdate()
+  const mutedMutation = useSettingsMutedNotificationsUpdate()
 
   const notifications = (data?.notifications ?? []) as Array<{
     id: string
@@ -54,6 +56,9 @@ export function NotificationsPanel() {
   const [webhookUrlError, setWebhookUrlError] = useState<string | null>(null)
   const [inAppEnabled, setInAppEnabled] = useState(true)
   const [inAppFreq, setInAppFreq] = useState<NotificationFrequency>("instant")
+  const [deliveryStart, setDeliveryStart] = useState("09:00")
+  const [deliveryEnd, setDeliveryEnd] = useState("18:00")
+  const [mutedUntil, setMutedUntil] = useState<string | null>(null)
 
   useEffect(() => {
     const email = notifications.find((n) => n.channel === "email")
@@ -72,7 +77,21 @@ export function NotificationsPanel() {
       setInAppEnabled(inApp.enabled)
       setInAppFreq(inApp.frequency ?? "instant")
     }
-  }, [notifications])
+    const dw = (data as { deliveryWindow?: { start?: string; end?: string } } | undefined)?.deliveryWindow
+    if (dw?.start) setDeliveryStart(dw.start)
+    if (dw?.end) setDeliveryEnd(dw.end)
+    const muted = (data as { mutedNotifications?: { until?: string } } | undefined)?.mutedNotifications
+    if (muted?.until) {
+      try {
+        const d = new Date(muted.until)
+        if (!Number.isNaN(d.getTime())) setMutedUntil(d.toISOString().slice(0, 16))
+      } catch {
+        setMutedUntil(null)
+      }
+    } else {
+      setMutedUntil(null)
+    }
+  }, [notifications, data])
 
   const debouncedWebhookUrl = useDebounce(webhookUrl, 300)
 
@@ -253,6 +272,113 @@ export function NotificationsPanel() {
         <Button onClick={handleSave} disabled={updateMutation.isPending}>
           {updateMutation.isPending ? "Saving…" : "Save notification preferences"}
         </Button>
+
+        {/* Delivery window */}
+        <div className="flex flex-col gap-4 rounded-lg border border-border p-4">
+          <div className="flex items-center gap-2">
+            <Clock className="h-5 w-5 text-muted-foreground" aria-hidden />
+            <div>
+              <Label htmlFor="delivery-window" className="font-medium">
+                Delivery window
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Only send notifications between these times (local time).
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="space-y-1">
+              <Label htmlFor="delivery-start" className="text-xs">From</Label>
+              <Input
+                id="delivery-start"
+                type="time"
+                value={deliveryStart}
+                onChange={(e) => setDeliveryStart(e.target.value)}
+                aria-label="Delivery window start"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="delivery-end" className="text-xs">To</Label>
+              <Input
+                id="delivery-end"
+                type="time"
+                value={deliveryEnd}
+                onChange={(e) => setDeliveryEnd(e.target.value)}
+                aria-label="Delivery window end"
+              />
+            </div>
+            <Button
+              size="sm"
+              onClick={() => deliveryWindowMutation.mutate({ start: deliveryStart, end: deliveryEnd })}
+              disabled={deliveryWindowMutation.isPending}
+              className="mt-6"
+            >
+              {deliveryWindowMutation.isPending ? "Saving…" : "Save window"}
+            </Button>
+          </div>
+        </div>
+
+        {/* Muted notifications */}
+        <div className="flex flex-col gap-4 rounded-lg border border-border p-4">
+          <div className="flex items-center gap-2">
+            <BellOff className="h-5 w-5 text-muted-foreground" aria-hidden />
+            <div>
+              <Label htmlFor="muted-until" className="font-medium">
+                Muted notifications
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Pause all notifications until a set time.
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="space-y-1">
+              <Label htmlFor="muted-until" className="text-xs">Mute until (optional)</Label>
+              <Input
+                id="muted-until"
+                type="datetime-local"
+                value={mutedUntil ?? ""}
+                onChange={(e) => setMutedUntil(e.target.value || null)}
+                aria-label="Mute notifications until"
+              />
+            </div>
+            <div className="flex gap-2 mt-6">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  const until = new Date()
+                  until.setHours(until.getHours() + 1)
+                  setMutedUntil(until.toISOString().slice(0, 16))
+                  mutedMutation.mutate({ until: until.toISOString() })
+                }}
+                disabled={mutedMutation.isPending}
+              >
+                Mute for 1 hour
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setMutedUntil(null)
+                  mutedMutation.mutate({})
+                }}
+                disabled={mutedMutation.isPending}
+              >
+                Unmute
+              </Button>
+              {mutedUntil && (
+                <Button
+                  size="sm"
+                  onClick={() => mutedMutation.mutate({ until: new Date(mutedUntil).toISOString() })}
+                  disabled={mutedMutation.isPending}
+                >
+                  {mutedMutation.isPending ? "Saving…" : "Save"}
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
       </CardContent>
     </Card>
   )

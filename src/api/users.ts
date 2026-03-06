@@ -230,4 +230,28 @@ export const usersApi = {
       await mockDelay(200)
     }
   },
+
+  /** Upload avatar image; returns new avatar URL or null. */
+  uploadAvatar: async (file: File): Promise<string | null> => {
+    try {
+      const base = import.meta.env.VITE_API_URL ?? "http://localhost:3000/api"
+      const token = localStorage.getItem("auth_token")
+      const formData = new FormData()
+      formData.append("avatar", file)
+      const headers: HeadersInit = {}
+      if (token) (headers as Record<string, string>)["Authorization"] = `Bearer ${token}`
+      const res = await fetch(`${base}/users/me/avatar`, {
+        method: "POST",
+        headers,
+        body: formData,
+      })
+      if (!res.ok) throw new Error("Upload failed")
+      const data = await res.json() as { avatar_url?: string; avatarUrl?: string }
+      const url = data?.avatar_url ?? data?.avatarUrl ?? null
+      return typeof url === "string" ? url : null
+    } catch {
+      await mockDelay(300)
+      return null
+    }
+  },
 }

@@ -6,11 +6,13 @@ import {
   ActivityLogPanel,
   SaveBar,
   AdminUserManagementPanel,
+  DataRefreshStatusCard,
 } from "@/components/user-profile"
 import type { ProfileDetailsFormValues } from "@/components/user-profile"
 import {
   useUserProfileMe,
   useUserProfileUpdate,
+  useAvatarUpload,
 } from "@/hooks/useUserProfile"
 import { useCurrentUser } from "@/hooks/useAuth"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -19,6 +21,7 @@ export default function UserProfile() {
   const { isAdmin } = useCurrentUser()
   const { data: profile, isLoading: profileLoading } = useUserProfileMe()
   const updateMutation = useUserProfileUpdate()
+  const avatarUploadMutation = useAvatarUpload()
 
   const [isEditing, setIsEditing] = useState(false)
   const [editValues, setEditValues] = useState({ name: "", organization: "" })
@@ -166,6 +169,7 @@ export default function UserProfile() {
           onEditValuesChange={handleEditValuesChange}
           isSaving={updateMutation.isPending}
           emailReadOnly
+          onAvatarUpload={async (file) => avatarUploadMutation.mutateAsync(file) ?? null}
         />
 
         <ProfileDetailsForm
@@ -188,6 +192,8 @@ export default function UserProfile() {
           isSubmitting={updateMutation.isPending}
           isLoading={profileLoading}
         />
+
+        <DataRefreshStatusCard />
 
         <ActivityLogPanel showExport={isAdmin} />
 

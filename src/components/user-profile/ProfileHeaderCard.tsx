@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { AvatarUploader } from "@/components/shared/AvatarUploader"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -26,6 +27,8 @@ export interface ProfileHeaderCardProps {
   onEditValuesChange: (v: { name?: string; organization?: string }) => void
   isSaving?: boolean
   emailReadOnly?: boolean
+  /** When provided, avatar becomes uploadable with progress indicator */
+  onAvatarUpload?: (file: File) => Promise<string | null>
 }
 
 export function ProfileHeaderCard({
@@ -37,6 +40,7 @@ export function ProfileHeaderCard({
   onEditValuesChange,
   isSaving = false,
   emailReadOnly = true,
+  onAvatarUpload,
 }: ProfileHeaderCardProps) {
   const email = profile?.email ?? ""
   const organization = profile?.organization ?? ""
@@ -48,12 +52,23 @@ export function ProfileHeaderCard({
     <Card className="card-elevated rounded-[1.25rem] border border-border bg-card shadow-card transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg">
       <CardHeader className="flex flex-row items-start justify-between gap-4">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-          <Avatar className="h-20 w-20 rounded-2xl border-2 border-border">
-            <AvatarImage src={profile?.avatar_url ?? undefined} alt="" />
-            <AvatarFallback className="rounded-2xl bg-primary/10 text-lg text-primary">
-              {getInitials(profile?.name ?? "", profile?.email ?? "")}
-            </AvatarFallback>
-          </Avatar>
+          {onAvatarUpload ? (
+            <AvatarUploader
+              avatarUrl={profile?.avatar_url ?? null}
+              displayName={profile?.name ?? ""}
+              email={profile?.email ?? ""}
+              onUpload={onAvatarUpload}
+              size="md"
+              disabled={isSaving}
+            />
+          ) : (
+            <Avatar className="h-20 w-20 rounded-2xl border-2 border-border">
+              <AvatarImage src={profile?.avatar_url ?? undefined} alt="" />
+              <AvatarFallback className="rounded-2xl bg-primary/10 text-lg text-primary">
+                {getInitials(profile?.name ?? "", profile?.email ?? "")}
+              </AvatarFallback>
+            </Avatar>
+          )}
           <div className="space-y-1">
             {isEditing ? (
               <>

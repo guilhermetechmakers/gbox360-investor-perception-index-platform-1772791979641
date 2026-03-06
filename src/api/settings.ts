@@ -13,6 +13,8 @@ import type {
   ApiKeyCreateResponse,
   DataRefreshUpdateInput,
   TeamInviteInput,
+  DeliveryWindow,
+  MutedNotifications,
 } from "@/types/settings"
 
 function normalizePayload(data: unknown): SettingsPayload | null {
@@ -39,6 +41,14 @@ function normalizePayload(data: unknown): SettingsPayload | null {
       : null
   const safeTeam = Array.isArray(team) ? (team as TeamMember[]) : []
   const safeSessions = Array.isArray(sessions) ? (sessions as Session[]) : []
+  const safeDeliveryWindow =
+    d.deliveryWindow && typeof d.deliveryWindow === "object" && typeof (d.deliveryWindow as Record<string, unknown>).start === "string"
+      ? (d.deliveryWindow as DeliveryWindow)
+      : null
+  const safeMuted =
+    d.mutedNotifications && typeof d.mutedNotifications === "object"
+      ? (d.mutedNotifications as MutedNotifications)
+      : null
 
   return {
     profile: safeProfile,
@@ -47,6 +57,8 @@ function normalizePayload(data: unknown): SettingsPayload | null {
     dataRefresh: safeDataRefresh,
     team: safeTeam,
     sessions: safeSessions,
+    deliveryWindow: safeDeliveryWindow ?? undefined,
+    mutedNotifications: safeMuted ?? undefined,
   }
 }
 
@@ -88,7 +100,9 @@ export const settingsApi = {
       enabled: boolean
       frequency?: string
       webhookUrl?: string
-    }>
+    }>,
+    deliveryWindow?: { start: string; end: string },
+    mutedNotifications?: { until?: string; channels?: string[] },
   }): Promise<NotificationPreference[]> => {
     try {
       const data = await api.put<NotificationPreference[] | { preferences?: NotificationPreference[] }>(
@@ -101,6 +115,27 @@ export const settingsApi = {
     } catch {
       await mockDelay(300)
       return mockSettingsPayload.notifications ?? []
+    }
+  },
+
+  updateDeliveryWindow: async (payload: { start: string; end: string }): Promise<DeliveryWindow> => {
+    try {
+      const data = await api.put<DeliveryWindow>("/settings/delivery-window", payload)
+      if (data && typeof data.start === "string" && typeof data.end === "string") return data
+      throw new Error("Invalid delivery window response")
+    } catch {
+      await mockDelay(200)
+      return { start: payload.start, end: payload.end }
+    }
+  },
+
+  updateMutedNotifications: async (payload: { until?: string; channels?: string[] }): Promise<MutedNotifications> => {
+    try {
+      const data = await api.put<MutedNotifications>("/settings/muted-notifications", payload)
+      return data && typeof data === "object" ? (data as MutedNotifications) : { until: payload.until, channels: payload.channels as MutedNotifications["channels"] }
+    } catch {
+      await mockDelay(200)
+      return { until: payload.until, channels: payload.channels as MutedNotifications["channels"] }
     }
   },
 

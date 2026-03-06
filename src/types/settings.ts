@@ -28,6 +28,18 @@ export interface NotificationPreference {
   webhookUrl?: string
 }
 
+/** Delivery window: only send notifications between start and end (local time). */
+export interface DeliveryWindow {
+  start: string
+  end: string
+}
+
+/** Muted notifications: do not send until this timestamp (ISO). */
+export interface MutedNotifications {
+  until?: string
+  channels?: NotificationChannel[]
+}
+
 export interface ApiKey {
   id: string
   userId: string
@@ -73,6 +85,8 @@ export interface SettingsPayload {
   dataRefresh: DataRefreshPreference | null
   team?: TeamMember[]
   sessions?: Session[]
+  deliveryWindow?: DeliveryWindow | null
+  mutedNotifications?: MutedNotifications | null
 }
 
 export interface ProfileUpdateInput {
@@ -86,6 +100,16 @@ export interface NotificationUpdateInput {
   enabled: boolean
   frequency?: NotificationFrequency
   webhookUrl?: string
+}
+
+export interface DeliveryWindowUpdateInput {
+  start: string
+  end: string
+}
+
+export interface MutedNotificationsUpdateInput {
+  until?: string
+  channels?: NotificationChannel[]
 }
 
 export interface ApiKeyCreateInput {
