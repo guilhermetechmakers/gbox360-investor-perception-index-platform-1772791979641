@@ -9,6 +9,11 @@ import {
   mockDashboardHealth,
   mockAuditLogs,
   mockUsers,
+  mockReplayHealth,
+  mockPreflightResult,
+  mockReplayJobs,
+  mockAuditLogsPreview,
+  getMockPreflight,
 } from "@/lib/admin-mock"
 import type {
   AuditLog,
@@ -22,6 +27,10 @@ import type {
   Tenant,
   AdminUser,
   InviteUserInput,
+  ReplayHealth,
+  PreflightResult,
+  ReplayJob,
+  ReplayMode,
 } from "@/types/admin"
 
 const safeArray = <T>(data: T[] | null | undefined): T[] =>
@@ -190,5 +199,73 @@ export const adminApi = {
   getReplayStatus: async (id: string): Promise<Replay> => {
     const res = await api.get<Replay>(`/admin/replays/${id}/status`)
     return res ?? { id, targetEventId: "", status: "PENDING", createdAt: "", updatedAt: "" }
+  },
+
+  // Data Replay endpoints
+  getDataReplayHealth: async (tenantId: string): Promise<ReplayHealth> => {
+    try {
+      const res = await api.get<ReplayHealth>(
+        `/admin/data-replay/health?tenantId=${encodeURIComponent(tenantId)}`
+      )
+      if (res?.tenantId) return res
+    } catch {
+      /* fall through to mock */
+    }
+    const { mockReplayHealth } = await import("@/lib/admin-mock")
+    return { ...mockReplayHealth, tenantId }
+  },
+
+  postDataReplayPreflight: async (body: {
+    tenantId: string
+    windowStart: string
+    windowEnd: string
+  }): Promise<PreflightResult> => {
+    try {
+      const res = await api.post<PreflightResult>("/admin/data-replay/preflight", body)
+      if (res?.valid !== undefined) return res
+    } catch {
+      /* fall through to mock */
+    }
+    const { getMockPreflight } = await import("@/lib/admin-mock")
+    return getMockPreflight(body.tenantId, body.windowStart, body.windowEnd)
+  },
+
+  postDataReplayRun: async (body: {
+    tenantId: string
+    windowStart: string
+    windowEnd: string
+    mode: ReplayMode
+  }): Promise<{ jobId: string; status: string }> => {
+    try {
+      const res = await api.post<{ jobId: string; status: string }>(
+        "/admin/data-replay/run",
+        body
+      )
+      if (res?.jobId) return res
+    } catch {
+      /* fall through to mock */
+    }
+    const jobId = `job-${Date.now()}`
+    return { jobId, status: body.mode === "dry-run" ? "completed" : "queued" }
+  },
+
+  getDataReplayJobs: async (params: {
+    tenantId?: string
+    windowStart?: string
+    windowEnd?: string
+  }): Promise<ReplayJob[]> => {
+    try {
+      const q = new URLSearchParams()
+      if (params.tenantId) q.set("tenantId", params.tenantId)
+      if (params.windowStart) q.set("windowStart", params.windowStart)
+      if (params.windowEnd) q.set("windowEnd", params.windowEnd)
+      const res = await api.get<{ data?: ReplayJob[]; items?: ReplayJob[] }>(
+        `/admin/data-replay/jobs?${q.toString()}`
+      )
+      const raw = (res as { data?: ReplayJob[] })?.data ?? (res as { items?: ReplayJob[] })?.items
+      return safeArray(raw)
+    } catch {
+      return []
+    }
   },
 }

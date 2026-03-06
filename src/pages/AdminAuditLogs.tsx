@@ -131,10 +131,11 @@ export default function AdminAuditLogs() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground">
-              Audit Logs
+              Admin — Audit Logs
             </h1>
             <p className="text-muted-foreground">
-              Immutable audit trail. Filter by tenant, event type, actor, and date range.
+              Immutable audit trail. Ingestion events, exports, weight simulations, and replays with
+              raw payload references.
             </p>
           </div>
           <HealthRibbon
@@ -145,10 +146,10 @@ export default function AdminAuditLogs() {
         </div>
 
         {/* Filters */}
-        <Card className="card-elevated rounded-[1rem] border border-border bg-card shadow-card">
+        <Card className="card-elevated rounded-[1.25rem] border border-border bg-card shadow-card">
           <CardHeader>
             <CardTitle className="font-display text-lg">Filters</CardTitle>
-            <CardDescription>Narrow by tenant, event type, actor, and date</CardDescription>
+            <CardDescription>Narrow by tenant, event type, actor, and date range</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -277,7 +278,7 @@ export default function AdminAuditLogs() {
         </Card>
 
         {/* Table */}
-        <Card className="card-elevated rounded-[1rem] border border-border bg-card shadow-card">
+        <Card className="card-elevated rounded-[1.25rem] border border-border bg-card shadow-card">
           <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-4">
             <div>
               <CardTitle className="flex items-center gap-2 font-display">
@@ -312,20 +313,20 @@ export default function AdminAuditLogs() {
                   <div className="min-w-[800px]">
                     <table
                       className="w-full border-collapse text-sm"
-                      role="grid"
+                      role="table"
                       aria-label="Audit log entries"
                     >
                       <thead>
-                        <tr className="border-b border-border bg-muted/30">
-                          <th className="p-3 text-left font-medium">Date / Time</th>
-                          <th className="p-3 text-left font-medium">Event type</th>
-                          <th className="p-3 text-left font-medium">Actor</th>
-                          <th className="p-3 text-left font-medium">Tenant</th>
-                          <th className="p-3 text-left font-medium">Event ID</th>
-                          <th className="p-3 text-left font-medium">Payload ID</th>
-                          <th className="p-3 text-left font-medium">Description</th>
-                          <th className="p-3 text-left font-medium">Retention</th>
-                          <th className="p-3 text-left font-medium">Payload</th>
+                        <tr className="sticky top-0 z-10 border-b border-border bg-muted/30">
+                          <th className="p-3 text-left font-medium" scope="col">Date / Time</th>
+                          <th className="p-3 text-left font-medium" scope="col">Event type</th>
+                          <th className="p-3 text-left font-medium" scope="col">Actor</th>
+                          <th className="p-3 text-left font-medium" scope="col">Tenant</th>
+                          <th className="p-3 text-left font-medium" scope="col">Event ID</th>
+                          <th className="p-3 text-left font-medium" scope="col">Payload ID</th>
+                          <th className="p-3 text-left font-medium" scope="col">Description</th>
+                          <th className="p-3 text-left font-medium" scope="col">Retention</th>
+                          <th className="p-3 text-left font-medium" scope="col">Payload</th>
                         </tr>
                       </thead>
                       <tbody>

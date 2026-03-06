@@ -10,6 +10,10 @@ import type {
   AuditLog,
   AdminUser,
   Tenant,
+  ReplayHealth,
+  PreflightResult,
+  ReplayJob,
+  AuditLogPreview,
 } from "@/types/admin"
 
 function toAuditLog(e: AuditLogEntry): AuditLog {
@@ -150,6 +154,95 @@ export const mockAuditLogs: AuditLogsResponse = {
   count: mockAuditLogItems.length,
   page: 1,
   pageSize: 25,
+}
+
+/** Data Replay mock data */
+export const mockReplayHealth: ReplayHealth = {
+  status: "healthy",
+  backlogSize: 12,
+  streamingLagMs: 450,
+  retryCountPerTenant: 2,
+  idempotencyEnabled: true,
+  retryPolicy: "exponential-backoff",
+}
+
+export const mockPreflightResult: PreflightResult = {
+  valid: true,
+  estimatedEvents: 1247,
+  resourceEstimate: {
+    cpuCores: 2,
+    memoryMB: 512,
+    networkIoMB: 48,
+  },
+  idempotencyStatus: "ok",
+  backlogHealth: "ok",
+  dryRunBatches: [
+    { batchIndex: 1, eventCount: 250, estimatedDurationMs: 1200 },
+    { batchIndex: 2, eventCount: 250, estimatedDurationMs: 1180 },
+    { batchIndex: 3, eventCount: 250, estimatedDurationMs: 1150 },
+    { batchIndex: 4, eventCount: 247, estimatedDurationMs: 1100 },
+  ],
+}
+
+export const mockReplayJobs: ReplayJob[] = [
+  {
+    id: "job-1",
+    tenantId: "t1",
+    tenantName: "Acme Capital",
+    windowStart: new Date(Date.now() - 86400000 * 2).toISOString(),
+    windowEnd: new Date(Date.now() - 86400000).toISOString(),
+    mode: "execute",
+    status: "completed",
+    startedAt: new Date(Date.now() - 3600000).toISOString(),
+    endedAt: new Date(Date.now() - 3000000).toISOString(),
+    estimatedResources: { cpuCores: 2, memoryMB: 512, networkIoMB: 48 },
+    actualResources: { cpuCores: 1.8, memoryMB: 480, networkIoMB: 45 },
+    summary: "1,247 events replayed successfully",
+    createdBy: "admin@gbox360.com",
+  },
+  {
+    id: "job-2",
+    tenantId: "t1",
+    tenantName: "Acme Capital",
+    windowStart: new Date(Date.now() - 86400000 * 7).toISOString(),
+    windowEnd: new Date(Date.now() - 86400000 * 5).toISOString(),
+    mode: "dry-run",
+    status: "completed",
+    startedAt: new Date(Date.now() - 7200000).toISOString(),
+    endedAt: new Date(Date.now() - 7180000).toISOString(),
+    summary: "Dry-run: 3,421 events estimated",
+    createdBy: "admin@gbox360.com",
+  },
+]
+
+export const mockAuditLogsPreview: AuditLogPreview[] = [
+  {
+    id: "log1",
+    timestamp: new Date().toISOString(),
+    actionType: "REPLAY",
+    description: "Data replay executed for tenant t1",
+    payloadRef: "p-001",
+  },
+  {
+    id: "log2",
+    timestamp: new Date(Date.now() - 3600000).toISOString(),
+    actionType: "DRY_RUN",
+    description: "Dry-run simulation completed",
+    payloadRef: "p-002",
+  },
+]
+
+/** Data Replay — mock preflight for tenant/window (variance for demo) */
+export function getMockPreflight(
+  _tenantId: string,
+  _windowStart: string,
+  _windowEnd: string
+): PreflightResult {
+  const variance = (_tenantId.length + _windowStart.length) % 500
+  return {
+    ...mockPreflightResult,
+    estimatedEvents: Math.max(100, mockPreflightResult.estimatedEvents + variance),
+  }
 }
 
 export const mockUsers: Record<string, AdminUser[]> = {

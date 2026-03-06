@@ -169,3 +169,167 @@ export interface InviteUserInput {
   role: string
   tenantId: string
 }
+
+/** Data Replay — ReplayJob status */
+export type ReplayJobStatus =
+  | "queued"
+  | "running"
+  | "completed"
+  | "failed"
+  | "cancelled"
+  | "paused"
+
+/** Data Replay — Replay mode */
+export type ReplayMode = "dry-run" | "execute"
+
+/** Data Replay — Resource estimates */
+export interface ResourceEstimate {
+  cpuCores?: number
+  memoryMB?: number
+  networkIOMB?: number
+}
+
+/** Data Replay — ReplayJob */
+export interface ReplayJob {
+  id: string
+  tenantId: string
+  windowStart: string
+  windowEnd: string
+  mode: ReplayMode
+  status: ReplayJobStatus
+  startedAt: string
+  endedAt?: string
+  estimatedResources?: ResourceEstimate
+  actualResources?: ResourceEstimate
+  summary?: string
+  createdBy?: string
+  progressPercent?: number
+  currentBatch?: number
+  etaSeconds?: number
+}
+
+/** Data Replay — Ingestion health per tenant */
+export interface ReplayHealth {
+  tenantId: string
+  status: "healthy" | "degraded" | "down"
+  backlogSize: number
+  streamingLagSeconds?: number
+  retryCount?: number
+  idempotencyEnabled: boolean
+  retryPolicy?: string
+}
+
+/** Data Replay — Preflight result */
+export interface PreflightResult {
+  valid: boolean
+  estimatedEventCount: number
+  estimatedResources: ResourceEstimate
+  batchEstimates?: { batchIndex: number; eventCount: number }[]
+  idempotencyStatus?: string
+  retryPolicy?: string
+}
+
+/** Data Replay — Dry-run result */
+export interface DryRunResult {
+  jobId: string
+  estimatedEventCount: number
+  estimatedResources: ResourceEstimate
+  batchEstimates?: { batchIndex: number; eventCount: number }[]
+  summary?: string
+}
+
+/** Data Replay — ReplayJob status */
+export type ReplayJobStatus =
+  | "queued"
+  | "running"
+  | "completed"
+  | "failed"
+  | "cancelled"
+  | "paused"
+
+/** Data Replay — mode */
+export type ReplayMode = "dry-run" | "execute"
+
+/** Ingestion health for preflight */
+export interface ReplayHealth {
+  status: "healthy" | "degraded" | "down"
+  backlogSize: number
+  streamingLagMs: number
+  retryCountPerTenant: number
+  idempotencyEnabled: boolean
+  retryPolicy: string
+}
+
+/** Preflight result */
+export interface PreflightResult {
+  valid: boolean
+  estimatedEvents: number
+  resourceEstimate: ResourceEstimate
+  idempotencyStatus: "ok" | "warning" | "error"
+  backlogHealth: "ok" | "warning" | "critical"
+  dryRunBatches?: DryRunBatch[]
+}
+
+export interface ResourceEstimate {
+  cpuCores: number
+  memoryMB: number
+  networkIoMB: number
+}
+
+export interface DryRunBatch {
+  batchIndex: number
+  eventCount: number
+  estimatedDurationMs: number
+}
+
+/** Replay run request */
+export interface ReplayRunParams {
+  tenantId: string
+  windowStart: string
+  windowEnd: string
+  mode: ReplayMode
+}
+
+/** Replay run response */
+export interface ReplayRunResponse {
+  jobId: string
+  status: ReplayJobStatus
+  message?: string
+}
+
+/** Job progress */
+export interface ReplayJobProgress {
+  jobId: string
+  status: ReplayJobStatus
+  progressPercent: number
+  currentBatch?: number
+  etaSeconds?: number
+  eventsProcessed?: number
+  totalEvents?: number
+}
+
+/** Replay job for history */
+export interface ReplayJob {
+  id: string
+  tenantId: string
+  tenantName?: string
+  windowStart: string
+  windowEnd: string
+  mode: ReplayMode
+  status: ReplayJobStatus
+  startedAt: string
+  endedAt?: string
+  estimatedResources?: ResourceEstimate
+  actualResources?: ResourceEstimate
+  summary?: string
+  createdBy?: string
+}
+
+/** Audit log preview for replay context */
+export interface AuditLogPreview {
+  id: string
+  timestamp: string
+  actionType: string
+  description: string
+  payloadRef?: string
+}
