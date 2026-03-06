@@ -24,4 +24,13 @@ export const authApi = {
 
   resendVerification: async (): Promise<void> =>
     api.post("/auth/resend-verification", {}),
+
+  getMe: async (): Promise<{ id: string; email: string; full_name?: string; role?: string } | null> => {
+    try {
+      const data = await api.get<{ id: string; email: string; full_name?: string; role?: string }>("/auth/me")
+      return data ?? null
+    } catch {
+      return null
+    }
+  },
 }

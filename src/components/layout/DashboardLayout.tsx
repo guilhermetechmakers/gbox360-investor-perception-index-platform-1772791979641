@@ -11,9 +11,11 @@ import {
   Menu,
   X,
   CreditCard,
+  Shield,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useSignOut } from "@/hooks/useAuth"
+import { useCurrentUser } from "@/hooks/useAuth"
 
 const navItems = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -26,8 +28,9 @@ const navItems = [
 export function DashboardLayout() {
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
-  const signOut = useSignOut()
   const navigate = useNavigate()
+  const signOut = useSignOut()
+  const { isAdmin } = useCurrentUser()
 
   const handleSignOut = () => {
     signOut.mutate(undefined, {
@@ -74,6 +77,18 @@ export function DashboardLayout() {
                 {!collapsed && <span>{label}</span>}
               </Link>
             ))}
+            {isAdmin && (
+              <Link
+                to="/admin-dashboard"
+                className={cn(
+                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary/10",
+                  collapsed && "justify-center px-2"
+                )}
+              >
+                <Shield className="h-5 w-5 shrink-0" />
+                {!collapsed && <span>Admin</span>}
+              </Link>
+            )}
           </nav>
         </ScrollArea>
         <div className="border-t border-border p-2">
@@ -134,6 +149,16 @@ export function DashboardLayout() {
               {label}
             </Link>
           ))}
+          {isAdmin && (
+            <Link
+              to="/admin-dashboard"
+              className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-primary hover:bg-primary/10"
+              onClick={() => setMobileOpen(false)}
+            >
+              <Shield className="h-5 w-5" />
+              Admin
+            </Link>
+          )}
           <Button
             variant="ghost"
             className="mt-4 w-full justify-start gap-3"

@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { Toaster } from "sonner"
 import { DashboardLayout } from "@/components/layout/DashboardLayout"
+import { AdminLayout } from "@/components/layout/AdminLayout"
 import Home from "@/pages/Home"
 import Login from "@/pages/Login"
 import Signup from "@/pages/Signup"
@@ -16,6 +17,9 @@ import Analytics from "@/pages/Analytics"
 import SubscriptionManagement from "@/pages/SubscriptionManagement"
 import SubscriptionCheckout from "@/pages/SubscriptionCheckout"
 import SubscriptionInvoices from "@/pages/SubscriptionInvoices"
+import AdminDashboard from "@/pages/AdminDashboard"
+import AdminAuditLogs from "@/pages/AdminAuditLogs"
+import AdminUserManagement from "@/pages/AdminUserManagement"
 import NotFound from "@/pages/NotFound"
 
 const queryClient = new QueryClient({
@@ -49,6 +53,13 @@ function App() {
             <Route path="subscription-management" element={<SubscriptionManagement />} />
             <Route path="subscription-management/checkout" element={<SubscriptionCheckout />} />
             <Route path="subscription-management/invoices" element={<SubscriptionInvoices />} />
+          </Route>
+          <Route path="/admin-dashboard" element={<AdminLayout />}>
+            <Route index element={<AdminDashboard />} />
+          </Route>
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route path="audit-logs" element={<AdminAuditLogs />} />
+            <Route path="user-management" element={<AdminUserManagement />} />
           </Route>
           <Route path="/404" element={<NotFound />} />
           <Route path="*" element={<Navigate to="/404" replace />} />

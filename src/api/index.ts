@@ -1,4 +1,5 @@
 export { authApi } from "./auth"
+export { adminApi } from "./admin"
 export { companiesApi } from "./companies"
 export { ipiApi } from "./ipi"
 export { subscriptionApi } from "./subscription"
