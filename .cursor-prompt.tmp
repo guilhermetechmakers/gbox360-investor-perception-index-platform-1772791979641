@@ -1347,179 +1347,233 @@ When implementing this project:
 ---
 
 **Remember: Always reference this file for design decisions. Do not use generic or placeholder designs.**
- for bestpractices and # 404 Not Found
+ for bestpractices and # About & Help
 
 ## Overview
-Create a user-friendly 404 Not Found page for the Gbox360 Investor Perception Platform. The page serves as a polished, enterprise-grade error screen when routes are not found, while seamlessly offering navigation back to the dashboard or landing page. It should also surface the integrated Search & Filter experience (Typeahead company search and filters for NarrativeEvents and IPI timelines) as a quick path to discovery, enabling users to recover their context and continue exploration without friction. All components must be resilient to null/undefined data and follow runtime safety guidelines for arrays and API responses.
+Develop a comprehensive About & Help documentation hub for the Gbox360 Investor Perception Index Platform. The page will provide a product overview, an FAQ with accordion behavior, an onboarding walkthrough with a step-by-step checklist for trial users, and a robust contact/support form that routes to a ticketing system. The UI should align with the fintech premium aesthetic described in the project context, ensure accessibility, and be resilient to partial data. All code must guard against null/undefined values before calling array methods and follow the runtime-safety rules specified.
 
 ## Page Description (Full Detail)
 What this page is:
-- A robust 404 Not Found page that gracefully handles missing routes, with clear messaging, helpful navigation, and quick access to core workflows (dashboard/landing). It should feel like a natural extension of the Gbox360 fintech UI, not a generic error screen.
+- A centralized Documentation hub titled “About & Help” that presents:
+  - Product overview: a concise, yet rich description of Investor Perception Index (IPI) and how it integrates with the platform’s data sources (news, social, earnings transcripts) in a high-level, non-sensitive manner.
+  - FAQ: an accordion-style list of frequently asked questions with expandable/collapsible answers.
+  - Onboarding walkthrough: a guided onboarding section with a step-by-step trial-user checklist, contextual explanations, and progress indicators.
+  - Contact support form: a form for submitting inquiries or support tickets with fields for subject, description, urgency, and optional attachments (if applicable in scope).
+  - Links to API/docs: navigational anchors to developer resources and API documentation (if applicable).
 
 Goals:
-- Communicate that the requested route cannot be found in a calm, professional manner.
-- Provide immediate, accessible options to navigate back to the dashboard or landing page.
-- Introduce and integrate the Start of the Search & Filter experience to help users recover their place (typeahead company search and filters for NarrativeEvents and IPI timelines) so they can quickly continue meaningful exploration.
-- Maintain visual consistency with the project’s visual language, typography, and spacing guidelines.
-- Ensure accessibility (aria-labels, keyboard navigability, sufficient color contrast) and performance considerations.
+- Provide users with a clear, scannable information hub that reduces friction before onboarding and supports ongoing assistance.
+- Deliver an accessible, responsive, and visually premium experience that feels aligned with Investor Perception Pro branding.
+- Enable support channeling so user inquiries reach the ticketing system with structured data for triage.
 
-UI elements and how they need to look:
-- Prominent, friendly 404 headline (e.g., “We can’t find that page”) using a serif display font for the hero area.
-- Subheading explaining the page isn’t available and offering options to navigate away.
-- Primary actions:
-  - Button: Go to Dashboard (green, primary)
-  - Button: Go to Landing Page (outlined/secondary, teal/gray-teal accents)
-- Central hero area with generous white space and a soft, editorial feel consistent with the hero styling in the project.
-- A compact, inline Search & Filter module tailored for discovery:
-  - Typeahead company search input
-  - Filters for NarrativeEvents and IPI timelines (date range, event type, etc.)
-  - Quick results listing to show potential match suggestions; ensure null safety for data
-- Inline helper cards or tips that illustrate how to search or recover (optional but encouraged for UX richness).
-- Visual guidance:
-  - Clear hierarchy: large hero heading, medium subheading, then actions and search module
-  - Cards with soft shadows and rounded corners
-  - Subtle promotional floating card area (if used) with brown backdrop and a CTA in accent orange for “Learn more” or “Docs”
+Connected features and data flows:
+- FAQ and onboarding content can be static or fetched from a content API; ensure safe handling of absent data.
+- Contact form submission should trigger a backend API endpoint to create a support ticket and store a draft payload for auditing.
+- Documentation links to API/docs (static or dynamic).
+- No live dashboards or dashboards in this sprint; the focus is content delivery and a clean UX.
 
-UI Style and Design System adherence:
-- Align with the specified color palette and typography
-- Maintain generous left/right padding, large hero heading, and 12-column grid implication with a max content width around 900–1000px for the hero
-- Use rounded cards (16–20px) with subtle shadows (0 6px 20px rgba(0,0,0,0.08))
-- Interactive elements: green primary CTAs, teal/gray teal secondary actions, focus rings in the brand green
-- Ensure hover and focus states provide a gentle lift or shadow intensification
+UI elements and guidance:
+- Hero section with a large, centered heading and supportive subheading on a warm hero background, using serif headline typography and sans-serif body copy.
+- Card-based sections with rounded corners, soft shadows, white surfaces, and generous padding.
+- FAQ: accordion components with accessible ARIA attributes; only expose one section at a time by default or allow multiple open sections per configuration.
+- Onboarding walkthrough: a vertical or horizontal stepper with each step describing actions, plus a checklist that tracks completion state and indicates progress.
+- Contact form: inputs for subject, description, urgency (dropdown), and a submit button; show success/failure feedback, with proper validation and error messaging.
+- Visual guidance: consistent with the visual style and color palette below; ensure adequate contrast, focus states, and keyboard navigability.
 
 API integrations:
-- No external APIs are required for the 404 page itself, but the Search & Filter module will require integration with the existing backend that provides:
-  - Company data (for typeahead)
-  - NarrativeEvents and IPI timeline data (for filtering and drill-down)
-- Since this is a 404 page, gracefully degrade to a static placeholder if APIs are unavailable, while still enabling navigation back to dashboard/landing.
+- No external API required for this sprint, but the architecture should be ready for integration (e.g., FAQ data source, onboarding content, and contact submission endpoints).
+- If implementing with mock data, ensure the data pipeline can be swapped to real endpoints with minimal changes.
 
-Connected Features:
-- Search & Filter: Typeahead company search and filters for NarrativeEvents and IPI timelines to help users quickly discover and drill down after landing on the 404 page.
+Security and accessibility:
+- All interactive elements accessible via keyboard; visible focus states.
+- Form inputs require validation with clear error messages and accessibility attributes (aria-live, aria-invalid, etc.).
+- Ensure no runtime crashes due to null/undefined data (per runtime-safety rules).
 
-Implementation Requirements
+## Components to Build
+- AboutHeaderHero
+  - Props: title, subtitle, backgroundPattern (optional)
+  - Behavior: responsive hero with centered content; supports max width 900–1000px for hero area
+- ProductOverviewCard
+  - Props: overviewText, architectureSummary (non-sensitive)
+  - UI: white card with rounded corners and drop shadow
+- FAQAccordion
+  - Props: faqItems: Array<{ id, question, answer }>
+  - Behavior: accessible accordion; allow expand/collapse with ARIA attributes; guard against non-array data
+- OnboardingWalkthrough
+  - Props: steps: Array<{ id, title, description }>, checklist: Array<{ id, label, completed }>
+  - UI: vertical or horizontal stepper; a checklist with toggles; progress indicators
+- OnboardingChecklist
+  - Subcomponent of OnboardingWalkthrough
+  - Behavior: track completion; persist in local state or simple store; resettable
+- ContactSupportForm
+  - Props: onSubmit(payload)
+  - Fields: subject (string), description (string), urgency (enum: Low/Medium/High)
+  - Validation: required subject/description; length limits; show validation messages
+  - Submission: POST to /api/support/tickets (or mock endpoint); handle success/failure states
+- LinkPanel
+  - Props: links: Array<{ label, href }>
+  - UI: simple navigation to API/docs or related resources
+- FloatingPromoCard (optional per design)
+  - Props: backdropColor, ctaLabel, onCTAClick
+  - Visual: brown gradient with accent orange CTA as described
+- NavBar
+  - Props: currentRoute, onNavigate
+  - UI: logo left, centered links, actions on the right; responsive handling
+- FooterNote (optional)
+  - Quick links and legal notes if needed
 
-Frontend
-- Pages/Routes:
-  - 404 Not Found page route (e.g., /404 or wildcard catch-all) integrated into the app’s routing
-- UI Components to Build:
-  - ErrorHero
-    - Large serif display heading
-    - Subheading with friendly message
-  - ActionBar
-    - Primary Go to Dashboard button (green)
-    - Secondary Go to Landing Page button (teal/gray-teal)
-  - TypeaheadSearchModule
-    - Input with autosuggest/typeahead behavior
-    - Debounced fetch calls to fetch company suggestions (guard for nulls)
-    - Show top suggestions with safe rendering: (data ?? []) and Array.isArray guards
-  - FilterPanel (NarrativeEvents & IPI)
-    - Date range picker (or simple from/to date inputs with validation)
-    - Event type filter (multiselect or checkboxes)
-    - Timeline filter (short presets)
-    - Ensure default states are arrays/objects via useState([]) and useState({}) patterns
-  - ResultsPreviewCard (optional)
-    - Compact list of potential matches or recent items to guide user
-    - All list rendering guarded with Array.isArray checks and data ?? []
-  - FloatingPromotionalCard (optional)
-    - Brown gradient/card with CTA in accent orange
-- State Management and Safety:
-  - useState initialization:
-    - const [suggestions, setSuggestions] = useState<any[]>([])
-    - const [filters, setFilters] = useState<{ [key: string]: any }>({})
-  - Data handling:
-    - When consuming API responses:
-      - const items = Array.isArray(response?.data) ? response.data : []
-      - Guard all map/filter/reduce with (items ?? []).map(...) or Array.isArray(items) ? items.map(...) : []
-  - Null/undefined guards:
-    - Always use data ?? [] for arrays, and optional chaining for nested properties
+## Implementation Requirements
+
+### Frontend
+- Framework: React with TypeScript (recommended for type safety)
+- State management: local component state; global minimal store if needed for shared UI state
+- Hooks: useState, useEffect, useRef as needed
+- Type safety: define interfaces for data models (FAQItem, Step, TicketPayload, etc.)
+- Runtime safety rules:
+  - Use data ?? [] when consuming arrays from API-like sources
+  - Guard array operations: (items ?? []).map(...); Array.isArray(items) ? items.map(...) : []
+  - Initialize useState with correct types: useState<FAQItem[]>([]) and useState<Step[]>([]) for arrays
+  - Validate API shapes: const list = Array.isArray(response?.data) ? response.data : []
+  - Optional chaining for nested data: obj?.property?.nested
+  - Destructure with defaults: const { items = [], count = 0 } = response ?? {}
 - Accessibility:
-  - ARIA labels for interactive elements
-  - Keyboard navigable search and filters
-  - High contrast text for headings and body
-- Performance:
-  - Debounce typeahead API calls
-  - Lazy-load suggestions if hots paths are heavy
-  - Cancel previous pending requests on new input
-
-Backend
-- APIs (if not yet present):
-  - Company search/typeahead API endpoint: GET /api/companies/search?q={query}&limit=10
-  - NarrativeEvents and IPI timeline filters: GET /api/ipi/timelines?companyId={id}&from={date}&to={date}&types={types}
-- Database and functions:
-  - Ensure endpoints return consistent shapes; if empty, return data: [] rather than null
-  - Use idempotent reads; implement rate-limiting hints in docs
-- Validation:
-  - Validate query parameters, dates, and filters server-side
-  - Return safe shapes: { data: Any[] } or { data: [] } if no results
-  - Ensure no runtime crashes if data is absent
-
-Integration
-- Connect frontend components to backend endpoints with safe data handling:
-  - Fetch typeahead suggestions with safeguards: const response = await fetch(...); const data = Array.isArray(response?.data) ? response.data : []
-  - After selection, apply filters to NarrativeEvents and IPI timelines via timeline API
-  - Pass results to UI components with safe defaults
+  - ARIA roles for accordion (aria-expanded, aria-controls), buttons with aria-labels
+  - Form fields with proper labels, aria-invalid, and error messaging
+  - Keyboard accessible navigation for all interactive elements
+- Visual styling:
+  - Implement the Design System visuals using CSS-in-JS (styled-components) or CSS Modules as per project norms
+  - Use the provided color palette and typography guidelines
+  - Card surfaces: white background, 16–20px border radius, soft shadows (0 6px 20px rgba(0,0,0,0.08))
+  - Hero: wide, centered content with generous padding; max width 900–1000px
+  - Spacing: vertical rhythm with 24–32px gaps between sections
+  - Hover/focus interactions: lift or shadow intensification for cards and CTAs
+- Data handling:
+  - Support data can be provided via props or mocked; ensure safe defaults when data is missing
+- API placeholders:
+  - For submission, implement a mock API utility that simulates POST and returns a resolved promise with success, or reject for error state; in real implementation, this will call the backend
 - Routing and navigation:
-  - Ensure 404 page is presented when route not found, but allow standard navigation to dashboard/landing
-- State synchronization:
-  - While on 404, maintain global UI state consistency (e.g., header nav highlights, user session)
+  - If using a router (e.g., react-router), create routes for /about-help or equivalent; ensure links to API/docs are anchor-safe
+- Performance:
+  - Lazy load heavy sections if needed; ensure SSR safety if project uses SSR
+- Testing considerations:
+  - Unit tests for FAQAccordion behavior, OnboardingChecklist state transitions
+  - End-to-end tests conceptually for form submission flow (mocked)
 
-User Experience Flow
-- User lands on a non-existent URL
-  - UI presents a friendly 404 message
-  - Prominent primary action: Go to Dashboard
-  - Secondary action: Go to Landing Page
-  - A Typeahead Search module is visible to quickly find companies or docs
-  - User types a company name:
-    - Debounced API call fetches suggestions
-    - Suggestions appear; user can click or navigate with keyboard
-  - User may select a company and apply NarrativeEvents/IPI filters:
-    - Date range and event-type filters refine data
-    - The UI shows a compact results preview (if available)
-  - User navigates away using actions or built-in navigation
-- If API data is unavailable, the page gracefully falls back to static guidance with navigation options
-
-Technical Specifications
-- Data Models:
-  - Company: { id: string, name: string, ticker?: string, ... }
-  - NarrativeEvent: { id: string, source: string, speaker: string, role?: string, audienceClass?: string, rawText?: string, timestamp?: string, ... }
-  - IPIEvent/Timeline: { id: string, companyId: string, date?: string, eventType?: string, narrativeId?: string, ... }
-- API Endpoints:
-  - GET /api/companies/search?q={query}&limit=10
-  - GET /api/ipi/timelines?companyId={id}&from={date}&to={date}&types={types}
-  - GET /api/ipi/current?companyId={id}
-- Security:
-  - User authentication context preserved; 404 page should enforce no sensitive data leakage
-  - If endpoints require auth, attach tokens via standard authorization headers
+### Backend
+- APIs to implement (if not provided by existing services):
+  - POST /api/support/tickets
+    - Payload: { subject: string, description: string, urgency: 'Low'|'Medium'|'High', createdBy?: string, companyId?: string }
+    - Response: { id: string, status: 'received' | 'failed', createdAt: string }
+  - GET /api/docs/faq (optional data source)
+  - GET /api/docs/onboarding (optional data source)
+- Database tables (for MVP in Sprint 1, outline):
+  - tickets: id (PK), subject, description, urgency, status, created_at, created_by, company_id
+  - faq_items: id, question, answer, order
+  - onboarding_steps: id, title, description, order
 - Validation:
-  - Input validation for typeahead (sanitize, limit results)
-  - Date range validation (from <= to, valid date formats)
-  - Filters validation (allowed event types, valid IDs)
+  - Server-side validation for required fields
+  - Rate limiting and audit logging (mocked for Sprint 1)
+- Security:
+  - Ensure endpoints require proper authentication/authorization if applicable; in MVP, return 401 for unauthenticated if required
+
+### Integration
+- Data flows:
+  - FAQAccordion consumes FAQ data (from props or API)
+  - OnboardingWalkthrough consumes steps data; state updates reflect user progress
+  - ContactSupportForm posts to tickets API; handle loading, success, and error states
+- Data safety:
+  - Apply the runtime safety rules on all data shapes coming from APIs or store
+- Theming:
+  - Ensure all components read theme/colors from a centralized theme or CSS variables to guarantee consistency
+
+## User Experience Flow
+1. User lands on About & Help page
+   - Hero with product overview snippet and navigation to sections
+2. Product Overview
+   - Read concise explanation of IPI, data sources, and how it helps investors
+3. FAQ
+   - User expands questions to reveal answers; multiple sections may be open depending on UX choice
+4. Onboarding Walkthrough
+   - User sees a stepper or list of onboarding steps
+   - Each step has a description; user marks steps as complete
+   - A progress indicator updates; the flow guides trial users toward enabling IPI features
+5. Contact Support
+   - User fills Subject, Description, and Urgency
+   - Validation errors shown inline
+   - On submit, a ticket is created; show a success banner with ticket ID and a back-to-faq link
+6. API/Docs Links
+   - Users can click through to API docs or developer resources
+7. Visual polish
+   - Hover effects, focus rings, and responsive behavior ensure a premium feel across devices
+
+## Technical Specifications
+
+Data Models
+- FAQItem
+  - id: string
+  - question: string
+  - answer: string
+  - order?: number
+- OnboardingStep
+  - id: string
+  - title: string
+  - description: string
+  - order?: number
+- TicketPayload
+  - subject: string
+  - description: string
+  - urgency: 'Low'|'Medium'|'High'
+  - createdBy?: string
+  - companyId?: string
+- TicketResponse
+  - id: string
+  - status: 'received'|'failed'
+  - createdAt: string
+
+API Endpoints
+- GET /api/docs/faq
+  - Returns: { data: FAQItem[] | null }
+- GET /api/docs/onboarding
+  - Returns: { data: OnboardingStep[] | null }
+- POST /api/support/tickets
+  - Body: TicketPayload
+  - Response: { id: string, status: string, createdAt: string }
+
+Security
+- If authentication is required, ensure endpoints enforce auth tokens/cookies
+- Validate input server-side; sanitize text
+- Audit trails and raw payload preservation in sandbox for debugging
+
+Validation
+- Client-side form:
+  - subject: required, 3–200 chars
+  - description: required, 10–2000 chars
+  - urgency: required
+- FAQ data: ensure array; guard with Array.isArray and data ?? []
+- Onboarding steps: ensure array and non-empty when rendering
+- All array operations guarded using (data ?? []).map(...) or Array.isArray(data) ? data.map(...) : []
 
 Acceptance Criteria
-- [ ] The 404 page renders with a clear, brand-consistent hero, messages, and navigation actions
-- [ ] Typeahead search loads suggestions safely; no runtime errors if API returns null or empty
-- [ ] Filter panel correctly initializes with safe defaults (arrays/objects) and does not crash if API data is missing
-- [ ] All array operations guarded: (items ?? []).map(...) or Array.isArray checks
-- [ ] useState defaults for arrays/objects are correct: useState<Type[]>([]) and useState<{ [key: string]: any }>({})
-- [ ] API responses are validated: const list = Array.isArray(response?.data) ? response.data : []
-- [ ] Accessibility requirements met (aria labels, keyboard navigation)
-- [ ] No sensitive data leaks; 404 does not expose internal routing details
-- [ ] Styles align with the Visual Style guidelines (colors, typography, spacing) and overall design system
+- [ ] The About & Help page renders with hero, overview card, FAQ accordion, onboarding checklist, and contact form
+- [ ] FAQ accordion supports expand/collapse with accessible ARIA attributes and no runtime crashes if data is missing
+- [ ] Onboarding checklist displays steps, tracks completion in local state, and shows progress
+- [ ] Contact form validates inputs, shows inline errors, and simulates ticket creation with a success message and ticket id
+- [ ] All array operations guarded to prevent runtime errors due to null/undefined
+- [ ] Data integration points designed to swap in real API data with minimal changes
 
 UI/UX Guidelines
 Apply the project's design system:
-- Consistent with the fintech aesthetic: premium, calm, data-forward
-- Serif display typography for hero headings; sans-serif for body
-- Wide hero with centered content; generous padding; 12-column grid impression
-- Cards with border radii 16–20px, shadows 0 6px 20px rgba(0,0,0,0.08)
-- Primary green actions (#2f6f63); secondary teal/gray-teal (#2b6250)
-- Background and surfaces: Hero Beige (#f3efe6), Page Taupe (#a79e96), Neutral White (#ffffff)
-- Typography: Playfair Display or Georgia for headings; Inter or Roboto for body
-- Clear visual hierarchy: hero heading, subheading, search/filters, action buttons
+- Follow the exact color palette and typography guidelines
+- Ensure a premium fintech aesthetic with calm, trustworthy visuals
+- Serif headings (Playfair Display or Georgia) and sans-serif body (Inter or Roboto)
+- Card-based layout with generous spacing and soft shadows
+- Interactive states: hover/focus lift, rounded surfaces, and clear CTAs
+- Desktop-first layout with responsive stacking for mobile
+- Accessibility and keyboard navigation throughout
 
 Visual Style
 
-Color Palette (as provided):
+Color Palette:
 - Primary Green: #2f6f63
 - Secondary Teal/Gray-Teal: #2b6250
 - Neutral White: #ffffff
@@ -1528,46 +1582,53 @@ Color Palette (as provided):
 - Text Dark: #1f1f1f
 - Body Text Gray: #555555
 - Card Shadow: rgba(0,0,0,0.08)
-- Accent Brown: #3b2b1e
-- Accent Orange: #e07a4c
+- Accent Brown (floating card): #3b2b1e
+- Accent Orange (floating card CTA): #e07a4c
 
 Typography & Layout:
-- Heading: serif display font, heavy weight, large scale
-- Body: sans-serif, regular/medium
-- Large hero heading, medium subheading, small muted body
-- 12-column grid impression; max content width 900–1000px for hero
-- Spacing: large top margins on hero; 24–32px gaps between sections
+- Heading: serif display font, heavy weight
+- Body: sans-serif, regular to medium
+- Hierarchy: large hero heading, medium subheading, small body copy
+- Layout: wide hero, max content width 900–1000px, 12-column grid implied
+- Spacing: large top margins on hero, line-height comfortable, 24–32px gaps
 
-Key Design Elements:
-- Card Design: pure white, 16–20px radii, shadow elevation, hover lift
-- Navigation: white top bar; logo left; centered links; right-aligned actions; hover/active states
-- Data Visualization: optional; muted gridlines; brand-aligned greens
-- Interactive Elements: rounded buttons; focus rings; consistent hover/active states
+Key Design Elements
+Card Design:
+- Surface: white, 16–20px radius
+- Shadow: 0 6px 20px rgba(0,0,0,0.08)
+- States: hover/focus lift
+- Hierarchy: prominent CTA over muted copy
+
+Navigation:
+- White top nav, logo left, centered links, actions right
+- Active/Hover: weight/underline; primary CTA green
+- Responsive horizontal nav with stacking
+
+Data Visualization:
+- Not required; if added, follow neutral palette with teal/green accents
+
+Interactive Elements:
+- Buttons: rounded, green primary with white text
+- Forms: light borders, rounded, teal/green focus ring
+- Hover/Active: deeper color, shadow intensification
+
+Design Philosophy
+- Premium fintech aesthetic
+- Clean, data-forward visuals
+- Serif headlines with sans-serif body
+- Clarity, accessibility, subtle depth through shadows
 
 Mandatory Coding Standards — Runtime Safety
-CRITICAL: Apply all runtime safety rules:
-- Supabase query results: use data ?? []
-- Array methods: guard with (items ?? []).map(...) or Array.isArray(items) ? items.map(...) : []
-- useState defaults: useState<Type[]>([]) for arrays; useState<Type>({}) or useState<{ [key: string]: any }>({}) as appropriate
-- API response shapes: const list = Array.isArray(response?.data) ? response.data : []
-- Optional chaining: use obj?.property?.nested
-- Destructuring with defaults: const { items = [], count = 0 } = response ?? {}
+- Apply all six rules listed in the prompt (nullish coalescing for results, guard array methods, correct useState defaults, validate API shapes, optional chaining, destructuring with defaults)
 
-Deliverables
-- A fully functional 404 Not Found page that integrates a typeahead search and basic filters for NarrativeEvents and IPI timelines
-- Clean, modular frontend components with clear props and types
-- Safe, defensive data handling for all array and API interactions
-- Documentation inside code comments for maintainability and future sprint alignment
-- A brief README section describing how to extend the 404 page with additional discovery components (search, filters) if desired
+Notes for AI development tool
+- Implement components modularly with clear prop interfaces
+- Use TypeScript types to enforce data contracts
+- Provide sensible default data in mock implementations to avoid null references
+- Ensure all data accesses are null-safe per the guidelines
+- Structure code so real API integration can be swapped with minimal changes
 
-Notes for AI Development Tool
-- Ensure all data reads are guarded; no direct assumptions about response shapes
-- Use default empty arrays or objects when data is missing
-- Provide fallbacks for API unavailability
-- Emphasize accessibility and performance in all components
-- Maintain alignment with the visual and design system guidelines described above
-
-This prompt provides a structured, actionable blueprint to implement a 404 Not Found page that not only handles missing routes gracefully but also offers an integrated, safe, and accessible Search & Filter experience to help users quickly discover relevant content and navigate back into the platform. for style.
+Generate the complete, detailed prompt now. for style.
 
 CRITICAL DESIGN REQUIREMENTS:
 - You MUST follow ALL design principles and patterns specified in the Design Reference above
@@ -1589,179 +1650,233 @@ CRITICAL TECHNICAL REQUIREMENTS:
 - When Supabase is configured: use Edge Functions for LLM and server-only logic; never expose API keys in the client
 
 === TASK ===
-# 404 Not Found
+# About & Help
 
 ## Overview
-Create a user-friendly 404 Not Found page for the Gbox360 Investor Perception Platform. The page serves as a polished, enterprise-grade error screen when routes are not found, while seamlessly offering navigation back to the dashboard or landing page. It should also surface the integrated Search & Filter experience (Typeahead company search and filters for NarrativeEvents and IPI timelines) as a quick path to discovery, enabling users to recover their context and continue exploration without friction. All components must be resilient to null/undefined data and follow runtime safety guidelines for arrays and API responses.
+Develop a comprehensive About & Help documentation hub for the Gbox360 Investor Perception Index Platform. The page will provide a product overview, an FAQ with accordion behavior, an onboarding walkthrough with a step-by-step checklist for trial users, and a robust contact/support form that routes to a ticketing system. The UI should align with the fintech premium aesthetic described in the project context, ensure accessibility, and be resilient to partial data. All code must guard against null/undefined values before calling array methods and follow the runtime-safety rules specified.
 
 ## Page Description (Full Detail)
 What this page is:
-- A robust 404 Not Found page that gracefully handles missing routes, with clear messaging, helpful navigation, and quick access to core workflows (dashboard/landing). It should feel like a natural extension of the Gbox360 fintech UI, not a generic error screen.
+- A centralized Documentation hub titled “About & Help” that presents:
+  - Product overview: a concise, yet rich description of Investor Perception Index (IPI) and how it integrates with the platform’s data sources (news, social, earnings transcripts) in a high-level, non-sensitive manner.
+  - FAQ: an accordion-style list of frequently asked questions with expandable/collapsible answers.
+  - Onboarding walkthrough: a guided onboarding section with a step-by-step trial-user checklist, contextual explanations, and progress indicators.
+  - Contact support form: a form for submitting inquiries or support tickets with fields for subject, description, urgency, and optional attachments (if applicable in scope).
+  - Links to API/docs: navigational anchors to developer resources and API documentation (if applicable).
 
 Goals:
-- Communicate that the requested route cannot be found in a calm, professional manner.
-- Provide immediate, accessible options to navigate back to the dashboard or landing page.
-- Introduce and integrate the Start of the Search & Filter experience to help users recover their place (typeahead company search and filters for NarrativeEvents and IPI timelines) so they can quickly continue meaningful exploration.
-- Maintain visual consistency with the project’s visual language, typography, and spacing guidelines.
-- Ensure accessibility (aria-labels, keyboard navigability, sufficient color contrast) and performance considerations.
+- Provide users with a clear, scannable information hub that reduces friction before onboarding and supports ongoing assistance.
+- Deliver an accessible, responsive, and visually premium experience that feels aligned with Investor Perception Pro branding.
+- Enable support channeling so user inquiries reach the ticketing system with structured data for triage.
 
-UI elements and how they need to look:
-- Prominent, friendly 404 headline (e.g., “We can’t find that page”) using a serif display font for the hero area.
-- Subheading explaining the page isn’t available and offering options to navigate away.
-- Primary actions:
-  - Button: Go to Dashboard (green, primary)
-  - Button: Go to Landing Page (outlined/secondary, teal/gray-teal accents)
-- Central hero area with generous white space and a soft, editorial feel consistent with the hero styling in the project.
-- A compact, inline Search & Filter module tailored for discovery:
-  - Typeahead company search input
-  - Filters for NarrativeEvents and IPI timelines (date range, event type, etc.)
-  - Quick results listing to show potential match suggestions; ensure null safety for data
-- Inline helper cards or tips that illustrate how to search or recover (optional but encouraged for UX richness).
-- Visual guidance:
-  - Clear hierarchy: large hero heading, medium subheading, then actions and search module
-  - Cards with soft shadows and rounded corners
-  - Subtle promotional floating card area (if used) with brown backdrop and a CTA in accent orange for “Learn more” or “Docs”
+Connected features and data flows:
+- FAQ and onboarding content can be static or fetched from a content API; ensure safe handling of absent data.
+- Contact form submission should trigger a backend API endpoint to create a support ticket and store a draft payload for auditing.
+- Documentation links to API/docs (static or dynamic).
+- No live dashboards or dashboards in this sprint; the focus is content delivery and a clean UX.
 
-UI Style and Design System adherence:
-- Align with the specified color palette and typography
-- Maintain generous left/right padding, large hero heading, and 12-column grid implication with a max content width around 900–1000px for the hero
-- Use rounded cards (16–20px) with subtle shadows (0 6px 20px rgba(0,0,0,0.08))
-- Interactive elements: green primary CTAs, teal/gray teal secondary actions, focus rings in the brand green
-- Ensure hover and focus states provide a gentle lift or shadow intensification
+UI elements and guidance:
+- Hero section with a large, centered heading and supportive subheading on a warm hero background, using serif headline typography and sans-serif body copy.
+- Card-based sections with rounded corners, soft shadows, white surfaces, and generous padding.
+- FAQ: accordion components with accessible ARIA attributes; only expose one section at a time by default or allow multiple open sections per configuration.
+- Onboarding walkthrough: a vertical or horizontal stepper with each step describing actions, plus a checklist that tracks completion state and indicates progress.
+- Contact form: inputs for subject, description, urgency (dropdown), and a submit button; show success/failure feedback, with proper validation and error messaging.
+- Visual guidance: consistent with the visual style and color palette below; ensure adequate contrast, focus states, and keyboard navigability.
 
 API integrations:
-- No external APIs are required for the 404 page itself, but the Search & Filter module will require integration with the existing backend that provides:
-  - Company data (for typeahead)
-  - NarrativeEvents and IPI timeline data (for filtering and drill-down)
-- Since this is a 404 page, gracefully degrade to a static placeholder if APIs are unavailable, while still enabling navigation back to dashboard/landing.
+- No external API required for this sprint, but the architecture should be ready for integration (e.g., FAQ data source, onboarding content, and contact submission endpoints).
+- If implementing with mock data, ensure the data pipeline can be swapped to real endpoints with minimal changes.
 
-Connected Features:
-- Search & Filter: Typeahead company search and filters for NarrativeEvents and IPI timelines to help users quickly discover and drill down after landing on the 404 page.
+Security and accessibility:
+- All interactive elements accessible via keyboard; visible focus states.
+- Form inputs require validation with clear error messages and accessibility attributes (aria-live, aria-invalid, etc.).
+- Ensure no runtime crashes due to null/undefined data (per runtime-safety rules).
 
-Implementation Requirements
+## Components to Build
+- AboutHeaderHero
+  - Props: title, subtitle, backgroundPattern (optional)
+  - Behavior: responsive hero with centered content; supports max width 900–1000px for hero area
+- ProductOverviewCard
+  - Props: overviewText, architectureSummary (non-sensitive)
+  - UI: white card with rounded corners and drop shadow
+- FAQAccordion
+  - Props: faqItems: Array<{ id, question, answer }>
+  - Behavior: accessible accordion; allow expand/collapse with ARIA attributes; guard against non-array data
+- OnboardingWalkthrough
+  - Props: steps: Array<{ id, title, description }>, checklist: Array<{ id, label, completed }>
+  - UI: vertical or horizontal stepper; a checklist with toggles; progress indicators
+- OnboardingChecklist
+  - Subcomponent of OnboardingWalkthrough
+  - Behavior: track completion; persist in local state or simple store; resettable
+- ContactSupportForm
+  - Props: onSubmit(payload)
+  - Fields: subject (string), description (string), urgency (enum: Low/Medium/High)
+  - Validation: required subject/description; length limits; show validation messages
+  - Submission: POST to /api/support/tickets (or mock endpoint); handle success/failure states
+- LinkPanel
+  - Props: links: Array<{ label, href }>
+  - UI: simple navigation to API/docs or related resources
+- FloatingPromoCard (optional per design)
+  - Props: backdropColor, ctaLabel, onCTAClick
+  - Visual: brown gradient with accent orange CTA as described
+- NavBar
+  - Props: currentRoute, onNavigate
+  - UI: logo left, centered links, actions on the right; responsive handling
+- FooterNote (optional)
+  - Quick links and legal notes if needed
 
-Frontend
-- Pages/Routes:
-  - 404 Not Found page route (e.g., /404 or wildcard catch-all) integrated into the app’s routing
-- UI Components to Build:
-  - ErrorHero
-    - Large serif display heading
-    - Subheading with friendly message
-  - ActionBar
-    - Primary Go to Dashboard button (green)
-    - Secondary Go to Landing Page button (teal/gray-teal)
-  - TypeaheadSearchModule
-    - Input with autosuggest/typeahead behavior
-    - Debounced fetch calls to fetch company suggestions (guard for nulls)
-    - Show top suggestions with safe rendering: (data ?? []) and Array.isArray guards
-  - FilterPanel (NarrativeEvents & IPI)
-    - Date range picker (or simple from/to date inputs with validation)
-    - Event type filter (multiselect or checkboxes)
-    - Timeline filter (short presets)
-    - Ensure default states are arrays/objects via useState([]) and useState({}) patterns
-  - ResultsPreviewCard (optional)
-    - Compact list of potential matches or recent items to guide user
-    - All list rendering guarded with Array.isArray checks and data ?? []
-  - FloatingPromotionalCard (optional)
-    - Brown gradient/card with CTA in accent orange
-- State Management and Safety:
-  - useState initialization:
-    - const [suggestions, setSuggestions] = useState<any[]>([])
-    - const [filters, setFilters] = useState<{ [key: string]: any }>({})
-  - Data handling:
-    - When consuming API responses:
-      - const items = Array.isArray(response?.data) ? response.data : []
-      - Guard all map/filter/reduce with (items ?? []).map(...) or Array.isArray(items) ? items.map(...) : []
-  - Null/undefined guards:
-    - Always use data ?? [] for arrays, and optional chaining for nested properties
+## Implementation Requirements
+
+### Frontend
+- Framework: React with TypeScript (recommended for type safety)
+- State management: local component state; global minimal store if needed for shared UI state
+- Hooks: useState, useEffect, useRef as needed
+- Type safety: define interfaces for data models (FAQItem, Step, TicketPayload, etc.)
+- Runtime safety rules:
+  - Use data ?? [] when consuming arrays from API-like sources
+  - Guard array operations: (items ?? []).map(...); Array.isArray(items) ? items.map(...) : []
+  - Initialize useState with correct types: useState<FAQItem[]>([]) and useState<Step[]>([]) for arrays
+  - Validate API shapes: const list = Array.isArray(response?.data) ? response.data : []
+  - Optional chaining for nested data: obj?.property?.nested
+  - Destructure with defaults: const { items = [], count = 0 } = response ?? {}
 - Accessibility:
-  - ARIA labels for interactive elements
-  - Keyboard navigable search and filters
-  - High contrast text for headings and body
-- Performance:
-  - Debounce typeahead API calls
-  - Lazy-load suggestions if hots paths are heavy
-  - Cancel previous pending requests on new input
-
-Backend
-- APIs (if not yet present):
-  - Company search/typeahead API endpoint: GET /api/companies/search?q={query}&limit=10
-  - NarrativeEvents and IPI timeline filters: GET /api/ipi/timelines?companyId={id}&from={date}&to={date}&types={types}
-- Database and functions:
-  - Ensure endpoints return consistent shapes; if empty, return data: [] rather than null
-  - Use idempotent reads; implement rate-limiting hints in docs
-- Validation:
-  - Validate query parameters, dates, and filters server-side
-  - Return safe shapes: { data: Any[] } or { data: [] } if no results
-  - Ensure no runtime crashes if data is absent
-
-Integration
-- Connect frontend components to backend endpoints with safe data handling:
-  - Fetch typeahead suggestions with safeguards: const response = await fetch(...); const data = Array.isArray(response?.data) ? response.data : []
-  - After selection, apply filters to NarrativeEvents and IPI timelines via timeline API
-  - Pass results to UI components with safe defaults
+  - ARIA roles for accordion (aria-expanded, aria-controls), buttons with aria-labels
+  - Form fields with proper labels, aria-invalid, and error messaging
+  - Keyboard accessible navigation for all interactive elements
+- Visual styling:
+  - Implement the Design System visuals using CSS-in-JS (styled-components) or CSS Modules as per project norms
+  - Use the provided color palette and typography guidelines
+  - Card surfaces: white background, 16–20px border radius, soft shadows (0 6px 20px rgba(0,0,0,0.08))
+  - Hero: wide, centered content with generous padding; max width 900–1000px
+  - Spacing: vertical rhythm with 24–32px gaps between sections
+  - Hover/focus interactions: lift or shadow intensification for cards and CTAs
+- Data handling:
+  - Support data can be provided via props or mocked; ensure safe defaults when data is missing
+- API placeholders:
+  - For submission, implement a mock API utility that simulates POST and returns a resolved promise with success, or reject for error state; in real implementation, this will call the backend
 - Routing and navigation:
-  - Ensure 404 page is presented when route not found, but allow standard navigation to dashboard/landing
-- State synchronization:
-  - While on 404, maintain global UI state consistency (e.g., header nav highlights, user session)
+  - If using a router (e.g., react-router), create routes for /about-help or equivalent; ensure links to API/docs are anchor-safe
+- Performance:
+  - Lazy load heavy sections if needed; ensure SSR safety if project uses SSR
+- Testing considerations:
+  - Unit tests for FAQAccordion behavior, OnboardingChecklist state transitions
+  - End-to-end tests conceptually for form submission flow (mocked)
 
-User Experience Flow
-- User lands on a non-existent URL
-  - UI presents a friendly 404 message
-  - Prominent primary action: Go to Dashboard
-  - Secondary action: Go to Landing Page
-  - A Typeahead Search module is visible to quickly find companies or docs
-  - User types a company name:
-    - Debounced API call fetches suggestions
-    - Suggestions appear; user can click or navigate with keyboard
-  - User may select a company and apply NarrativeEvents/IPI filters:
-    - Date range and event-type filters refine data
-    - The UI shows a compact results preview (if available)
-  - User navigates away using actions or built-in navigation
-- If API data is unavailable, the page gracefully falls back to static guidance with navigation options
-
-Technical Specifications
-- Data Models:
-  - Company: { id: string, name: string, ticker?: string, ... }
-  - NarrativeEvent: { id: string, source: string, speaker: string, role?: string, audienceClass?: string, rawText?: string, timestamp?: string, ... }
-  - IPIEvent/Timeline: { id: string, companyId: string, date?: string, eventType?: string, narrativeId?: string, ... }
-- API Endpoints:
-  - GET /api/companies/search?q={query}&limit=10
-  - GET /api/ipi/timelines?companyId={id}&from={date}&to={date}&types={types}
-  - GET /api/ipi/current?companyId={id}
-- Security:
-  - User authentication context preserved; 404 page should enforce no sensitive data leakage
-  - If endpoints require auth, attach tokens via standard authorization headers
+### Backend
+- APIs to implement (if not provided by existing services):
+  - POST /api/support/tickets
+    - Payload: { subject: string, description: string, urgency: 'Low'|'Medium'|'High', createdBy?: string, companyId?: string }
+    - Response: { id: string, status: 'received' | 'failed', createdAt: string }
+  - GET /api/docs/faq (optional data source)
+  - GET /api/docs/onboarding (optional data source)
+- Database tables (for MVP in Sprint 1, outline):
+  - tickets: id (PK), subject, description, urgency, status, created_at, created_by, company_id
+  - faq_items: id, question, answer, order
+  - onboarding_steps: id, title, description, order
 - Validation:
-  - Input validation for typeahead (sanitize, limit results)
-  - Date range validation (from <= to, valid date formats)
-  - Filters validation (allowed event types, valid IDs)
+  - Server-side validation for required fields
+  - Rate limiting and audit logging (mocked for Sprint 1)
+- Security:
+  - Ensure endpoints require proper authentication/authorization if applicable; in MVP, return 401 for unauthenticated if required
+
+### Integration
+- Data flows:
+  - FAQAccordion consumes FAQ data (from props or API)
+  - OnboardingWalkthrough consumes steps data; state updates reflect user progress
+  - ContactSupportForm posts to tickets API; handle loading, success, and error states
+- Data safety:
+  - Apply the runtime safety rules on all data shapes coming from APIs or store
+- Theming:
+  - Ensure all components read theme/colors from a centralized theme or CSS variables to guarantee consistency
+
+## User Experience Flow
+1. User lands on About & Help page
+   - Hero with product overview snippet and navigation to sections
+2. Product Overview
+   - Read concise explanation of IPI, data sources, and how it helps investors
+3. FAQ
+   - User expands questions to reveal answers; multiple sections may be open depending on UX choice
+4. Onboarding Walkthrough
+   - User sees a stepper or list of onboarding steps
+   - Each step has a description; user marks steps as complete
+   - A progress indicator updates; the flow guides trial users toward enabling IPI features
+5. Contact Support
+   - User fills Subject, Description, and Urgency
+   - Validation errors shown inline
+   - On submit, a ticket is created; show a success banner with ticket ID and a back-to-faq link
+6. API/Docs Links
+   - Users can click through to API docs or developer resources
+7. Visual polish
+   - Hover effects, focus rings, and responsive behavior ensure a premium feel across devices
+
+## Technical Specifications
+
+Data Models
+- FAQItem
+  - id: string
+  - question: string
+  - answer: string
+  - order?: number
+- OnboardingStep
+  - id: string
+  - title: string
+  - description: string
+  - order?: number
+- TicketPayload
+  - subject: string
+  - description: string
+  - urgency: 'Low'|'Medium'|'High'
+  - createdBy?: string
+  - companyId?: string
+- TicketResponse
+  - id: string
+  - status: 'received'|'failed'
+  - createdAt: string
+
+API Endpoints
+- GET /api/docs/faq
+  - Returns: { data: FAQItem[] | null }
+- GET /api/docs/onboarding
+  - Returns: { data: OnboardingStep[] | null }
+- POST /api/support/tickets
+  - Body: TicketPayload
+  - Response: { id: string, status: string, createdAt: string }
+
+Security
+- If authentication is required, ensure endpoints enforce auth tokens/cookies
+- Validate input server-side; sanitize text
+- Audit trails and raw payload preservation in sandbox for debugging
+
+Validation
+- Client-side form:
+  - subject: required, 3–200 chars
+  - description: required, 10–2000 chars
+  - urgency: required
+- FAQ data: ensure array; guard with Array.isArray and data ?? []
+- Onboarding steps: ensure array and non-empty when rendering
+- All array operations guarded using (data ?? []).map(...) or Array.isArray(data) ? data.map(...) : []
 
 Acceptance Criteria
-- [ ] The 404 page renders with a clear, brand-consistent hero, messages, and navigation actions
-- [ ] Typeahead search loads suggestions safely; no runtime errors if API returns null or empty
-- [ ] Filter panel correctly initializes with safe defaults (arrays/objects) and does not crash if API data is missing
-- [ ] All array operations guarded: (items ?? []).map(...) or Array.isArray checks
-- [ ] useState defaults for arrays/objects are correct: useState<Type[]>([]) and useState<{ [key: string]: any }>({})
-- [ ] API responses are validated: const list = Array.isArray(response?.data) ? response.data : []
-- [ ] Accessibility requirements met (aria labels, keyboard navigation)
-- [ ] No sensitive data leaks; 404 does not expose internal routing details
-- [ ] Styles align with the Visual Style guidelines (colors, typography, spacing) and overall design system
+- [ ] The About & Help page renders with hero, overview card, FAQ accordion, onboarding checklist, and contact form
+- [ ] FAQ accordion supports expand/collapse with accessible ARIA attributes and no runtime crashes if data is missing
+- [ ] Onboarding checklist displays steps, tracks completion in local state, and shows progress
+- [ ] Contact form validates inputs, shows inline errors, and simulates ticket creation with a success message and ticket id
+- [ ] All array operations guarded to prevent runtime errors due to null/undefined
+- [ ] Data integration points designed to swap in real API data with minimal changes
 
 UI/UX Guidelines
 Apply the project's design system:
-- Consistent with the fintech aesthetic: premium, calm, data-forward
-- Serif display typography for hero headings; sans-serif for body
-- Wide hero with centered content; generous padding; 12-column grid impression
-- Cards with border radii 16–20px, shadows 0 6px 20px rgba(0,0,0,0.08)
-- Primary green actions (#2f6f63); secondary teal/gray-teal (#2b6250)
-- Background and surfaces: Hero Beige (#f3efe6), Page Taupe (#a79e96), Neutral White (#ffffff)
-- Typography: Playfair Display or Georgia for headings; Inter or Roboto for body
-- Clear visual hierarchy: hero heading, subheading, search/filters, action buttons
+- Follow the exact color palette and typography guidelines
+- Ensure a premium fintech aesthetic with calm, trustworthy visuals
+- Serif headings (Playfair Display or Georgia) and sans-serif body (Inter or Roboto)
+- Card-based layout with generous spacing and soft shadows
+- Interactive states: hover/focus lift, rounded surfaces, and clear CTAs
+- Desktop-first layout with responsive stacking for mobile
+- Accessibility and keyboard navigation throughout
 
 Visual Style
 
-Color Palette (as provided):
+Color Palette:
 - Primary Green: #2f6f63
 - Secondary Teal/Gray-Teal: #2b6250
 - Neutral White: #ffffff
@@ -1770,46 +1885,53 @@ Color Palette (as provided):
 - Text Dark: #1f1f1f
 - Body Text Gray: #555555
 - Card Shadow: rgba(0,0,0,0.08)
-- Accent Brown: #3b2b1e
-- Accent Orange: #e07a4c
+- Accent Brown (floating card): #3b2b1e
+- Accent Orange (floating card CTA): #e07a4c
 
 Typography & Layout:
-- Heading: serif display font, heavy weight, large scale
-- Body: sans-serif, regular/medium
-- Large hero heading, medium subheading, small muted body
-- 12-column grid impression; max content width 900–1000px for hero
-- Spacing: large top margins on hero; 24–32px gaps between sections
+- Heading: serif display font, heavy weight
+- Body: sans-serif, regular to medium
+- Hierarchy: large hero heading, medium subheading, small body copy
+- Layout: wide hero, max content width 900–1000px, 12-column grid implied
+- Spacing: large top margins on hero, line-height comfortable, 24–32px gaps
 
-Key Design Elements:
-- Card Design: pure white, 16–20px radii, shadow elevation, hover lift
-- Navigation: white top bar; logo left; centered links; right-aligned actions; hover/active states
-- Data Visualization: optional; muted gridlines; brand-aligned greens
-- Interactive Elements: rounded buttons; focus rings; consistent hover/active states
+Key Design Elements
+Card Design:
+- Surface: white, 16–20px radius
+- Shadow: 0 6px 20px rgba(0,0,0,0.08)
+- States: hover/focus lift
+- Hierarchy: prominent CTA over muted copy
+
+Navigation:
+- White top nav, logo left, centered links, actions right
+- Active/Hover: weight/underline; primary CTA green
+- Responsive horizontal nav with stacking
+
+Data Visualization:
+- Not required; if added, follow neutral palette with teal/green accents
+
+Interactive Elements:
+- Buttons: rounded, green primary with white text
+- Forms: light borders, rounded, teal/green focus ring
+- Hover/Active: deeper color, shadow intensification
+
+Design Philosophy
+- Premium fintech aesthetic
+- Clean, data-forward visuals
+- Serif headlines with sans-serif body
+- Clarity, accessibility, subtle depth through shadows
 
 Mandatory Coding Standards — Runtime Safety
-CRITICAL: Apply all runtime safety rules:
-- Supabase query results: use data ?? []
-- Array methods: guard with (items ?? []).map(...) or Array.isArray(items) ? items.map(...) : []
-- useState defaults: useState<Type[]>([]) for arrays; useState<Type>({}) or useState<{ [key: string]: any }>({}) as appropriate
-- API response shapes: const list = Array.isArray(response?.data) ? response.data : []
-- Optional chaining: use obj?.property?.nested
-- Destructuring with defaults: const { items = [], count = 0 } = response ?? {}
+- Apply all six rules listed in the prompt (nullish coalescing for results, guard array methods, correct useState defaults, validate API shapes, optional chaining, destructuring with defaults)
 
-Deliverables
-- A fully functional 404 Not Found page that integrates a typeahead search and basic filters for NarrativeEvents and IPI timelines
-- Clean, modular frontend components with clear props and types
-- Safe, defensive data handling for all array and API interactions
-- Documentation inside code comments for maintainability and future sprint alignment
-- A brief README section describing how to extend the 404 page with additional discovery components (search, filters) if desired
+Notes for AI development tool
+- Implement components modularly with clear prop interfaces
+- Use TypeScript types to enforce data contracts
+- Provide sensible default data in mock implementations to avoid null references
+- Ensure all data accesses are null-safe per the guidelines
+- Structure code so real API integration can be swapped with minimal changes
 
-Notes for AI Development Tool
-- Ensure all data reads are guarded; no direct assumptions about response shapes
-- Use default empty arrays or objects when data is missing
-- Provide fallbacks for API unavailability
-- Emphasize accessibility and performance in all components
-- Maintain alignment with the visual and design system guidelines described above
-
-This prompt provides a structured, actionable blueprint to implement a 404 Not Found page that not only handles missing routes gracefully but also offers an integrated, safe, and accessible Search & Filter experience to help users quickly discover relevant content and navigate back into the platform.
+Generate the complete, detailed prompt now.
 
 === SUCCESS CRITERIA ===
 # Success Criteria Checklist
