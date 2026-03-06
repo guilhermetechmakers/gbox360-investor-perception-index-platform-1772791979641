@@ -87,7 +87,7 @@ export function FAQAccordion({
                   {item.answer}
                 </AccordionContent>
               </AccordionItem>
-            )}
+            ))}
           </Accordion>
         ) : (
           <Accordion
@@ -117,7 +117,7 @@ export function FAQAccordion({
                   {item.answer}
                 </AccordionContent>
               </AccordionItem>
-            )}
+            ))}
           </Accordion>
         )}
       </CardContent>

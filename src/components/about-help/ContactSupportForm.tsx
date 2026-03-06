@@ -208,19 +208,25 @@ export function ContactSupportForm({
               className={cn(errors.description && "border-destructive")}
               aria-invalid={!!errors.description}
               aria-describedby={
-                errors.description ? "description-error" : undefined
+                errors.description ? "description-error" : "description-count"
               }
               disabled={submitStatus === "loading"}
             />
-            {errors.description && (
-              <p
-                id="description-error"
-                className="text-sm text-destructive"
-                role="alert"
-              >
-                {errors.description.message}
-              </p>
-            )}
+            <div className="flex justify-between">
+              {errors.description ? (
+                <p
+                  id="description-error"
+                  className="text-sm text-destructive"
+                  role="alert"
+                >
+                  {errors.description.message}
+                </p>
+              ) : (
+                <span id="description-count" className="text-sm text-muted-foreground" aria-live="polite">
+                  {watch("description").length} / 2000 characters
+                </span>
+              )}
+            </div>
           </div>
 
           <div className="space-y-2">

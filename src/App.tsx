@@ -23,6 +23,7 @@ import AdminAuditLogs from "@/pages/AdminAuditLogs"
 import AdminDataReplay from "@/pages/AdminDataReplay"
 import AdminUserManagement from "@/pages/AdminUserManagement"
 import NotFound from "@/pages/NotFound"
+import ServerError500 from "@/pages/ServerError500"
 import AboutHelp from "@/pages/AboutHelp"
 import PrivacyPolicy from "@/pages/PrivacyPolicy"
 import TermsOfService from "@/pages/TermsOfService"
@@ -76,6 +77,7 @@ function App() {
             <Route path="user-management" element={<AdminUserManagement />} />
           </Route>
           <Route path="/404" element={<NotFound />} />
+          <Route path="/500" element={<ServerError500 />} />
           <Route path="*" element={<Navigate to="/404" replace />} />
         </Routes>
       </BrowserRouter>
