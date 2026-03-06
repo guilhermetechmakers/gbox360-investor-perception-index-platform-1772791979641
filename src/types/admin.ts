@@ -21,14 +21,53 @@ export interface Tenant {
   status: TenantStatus
 }
 
+export interface AdminUserTenant {
+  tenantId: string
+  tenantName?: string
+  roleIds: string[]
+}
+
 export interface AdminUser {
   id: string
   email: string
-  name: string
+  name?: string
   roles: string[]
-  tenantId: string
+  tenantId?: string
+  tenants?: AdminUserTenant[]
   status: UserStatus
   lastLogin?: string
+  created_at?: string
+  updated_at?: string
+}
+
+export interface AdminRole {
+  id: string
+  name: string
+  permissions?: string[]
+}
+
+export interface UserTenantRole {
+  id: string
+  user_id: string
+  tenant_id: string
+  role_id: string
+  assigned_at: string
+}
+
+export interface TenantRoleAssignment {
+  tenantId: string
+  roleId: string
+}
+
+export interface Invitation {
+  id: string
+  email: string
+  tenant_id: string
+  role_ids: string[]
+  invited_by: string
+  expires_at: string
+  status: "pending" | "accepted" | "expired"
+  created_at: string
 }
 
 /** Event type taxonomy for audit logs */
@@ -166,8 +205,41 @@ export interface AuditLogExportResponse {
 export interface InviteUserInput {
   email: string
   name?: string
-  role: string
-  tenantId: string
+  role?: string
+  tenantId?: string
+  tenantRoles?: TenantRoleAssignment[]
+  ssoEnabled?: boolean
+  expiresAt?: string
+  message?: string
+}
+
+export interface AdminUsersParams {
+  tenantId?: string
+  roleId?: string
+  status?: UserStatus | ""
+  q?: string
+  page?: number
+  pageSize?: number
+}
+
+export interface AdminUsersResponse {
+  items?: AdminUser[]
+  data?: AdminUser[]
+  count: number
+  page: number
+  pageSize: number
+}
+
+/** Audit event for user management actions */
+export interface UserAuditEvent {
+  id: string
+  actor_id: string
+  actor_email?: string
+  action: string
+  target_type: "user" | "invitation"
+  target_id: string
+  timestamp: string
+  payload?: Record<string, unknown>
 }
 
 /** Data Replay — ReplayJob status */

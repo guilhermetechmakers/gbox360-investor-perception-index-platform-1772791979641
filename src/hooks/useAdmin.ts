@@ -1,15 +1,22 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { adminApi } from "@/api/admin"
-import type { AuditLogsParams, AuditLogExportParams, InviteUserInput } from "@/types/admin"
+import type {
+  AuditLogsParams,
+  AuditLogExportParams,
+  AdminUsersParams,
+  InviteUserInput,
+} from "@/types/admin"
 import { safeArray } from "@/lib/data-guard"
 
 export const adminKeys = {
   health: ["admin", "dashboard-health"] as const,
   tenants: ["admin", "tenants"] as const,
+  roles: ["admin", "roles"] as const,
   auditLogs: (params: AuditLogsParams) => ["admin", "audit-logs", params] as const,
   auditLogPayload: (id: string) => ["admin", "audit-logs", id, "payload"] as const,
-  users: (tenantId: string) => ["admin", "users", tenantId] as const,
+  users: (params: AdminUsersParams) => ["admin", "users", params] as const,
+  usersLegacy: (tenantId: string) => ["admin", "users", "legacy", tenantId] as const,
   replayStatus: (id: string) => ["admin", "replays", id, "status"] as const,
   dataReplayHealth: (tenantId?: string) => ["admin", "data-replay", "health", tenantId ?? ""] as const,
   dataReplayPreflight: (params: { tenantId: string; windowStart: string; windowEnd: string }) =>
@@ -73,11 +80,22 @@ export function useAdminAuditLogExport() {
   })
 }
 
-export function useAdminUsers(tenantId: string | null) {
+export function useAdminUsers(params: AdminUsersParams | null) {
   return useQuery({
-    queryKey: adminKeys.users(tenantId ?? ""),
-    queryFn: () => adminApi.getUsers(tenantId ?? ""),
-    enabled: !!tenantId,
+    queryKey: adminKeys.users(params ?? {}),
+    queryFn: () => adminApi.getUsers(params ?? {}),
+    enabled: !!params,
+    select: (data) => ({
+      ...data,
+      items: safeArray(data?.items),
+    }),
+  })
+}
+
+export function useAdminRoles() {
+  return useQuery({
+    queryKey: adminKeys.roles,
+    queryFn: adminApi.getRoles,
     select: (data) => safeArray(data),
   })
 }
@@ -87,7 +105,12 @@ export function useAdminUserInvite() {
   return useMutation({
     mutationFn: (input: InviteUserInput) => adminApi.inviteUser(input),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: adminKeys.users(variables.tenantId) })
+      queryClient.invalidateQueries({ queryKey: ["admin", "users"] })
+      if (variables.tenantId) {
+        queryClient.invalidateQueries({
+          queryKey: adminKeys.usersLegacy(variables.tenantId),
+        })
+      }
       toast.success("Invitation sent")
     },
     onError: (error: Error) => {
@@ -96,12 +119,12 @@ export function useAdminUserInvite() {
   })
 }
 
-export function useAdminUserDeactivate(tenantId: string) {
+export function useAdminUserDeactivate() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => adminApi.deactivateUser(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: adminKeys.users(tenantId) })
+      queryClient.invalidateQueries({ queryKey: ["admin", "users"] })
       toast.success("User deactivated")
     },
     onError: (error: Error) => {
@@ -110,16 +133,49 @@ export function useAdminUserDeactivate(tenantId: string) {
   })
 }
 
-export function useAdminUserReactivate(tenantId: string) {
+export function useAdminUserReactivate() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => adminApi.reactivateUser(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: adminKeys.users(tenantId) })
+      queryClient.invalidateQueries({ queryKey: ["admin", "users"] })
       toast.success("User reactivated")
     },
     onError: (error: Error) => {
       toast.error(error.message ?? "Reactivation failed")
+    },
+  })
+}
+
+export function useAdminUserResetPassword() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => adminApi.resetPassword(id),
+    onSuccess: () => {
+      toast.success("Password reset email sent")
+    },
+    onError: (error: Error) => {
+      toast.error(error.message ?? "Reset password failed")
+    },
+  })
+}
+
+export function useAdminUserExport() {
+  return useMutation({
+    mutationFn: (params: AdminUsersParams & { format?: "csv" | "json" }) =>
+      adminApi.exportUsers(params),
+    onSuccess: (data) => {
+      if (data?.url) {
+        const a = document.createElement("a")
+        a.href = data.url
+        a.download = `users-export-${new Date().toISOString().slice(0, 10)}.${data.url.endsWith("json") ? "json" : "csv"}`
+        a.click()
+        URL.revokeObjectURL(data.url)
+        toast.success("Users exported")
+      }
+    },
+    onError: (error: Error) => {
+      toast.error(error.message ?? "Export failed")
     },
   })
 }

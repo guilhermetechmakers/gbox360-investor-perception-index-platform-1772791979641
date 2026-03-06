@@ -9,7 +9,11 @@ import type {
   AuditLogEntry,
   AuditLog,
   AdminUser,
+  AdminRole,
+  AdminUsersParams,
+  AdminUsersResponse,
   Tenant,
+  UserAuditEvent,
   ReplayHealth,
   PreflightResult,
   ReplayJob,
@@ -249,36 +253,133 @@ export const mockAuditLogsPreview: AuditLogPreview[] = [
   },
 ]
 
+export const mockRoles: AdminRole[] = [
+  { id: "r1", name: "VIEWER", permissions: ["read"] },
+  { id: "r2", name: "ANALYST", permissions: ["read", "analyze"] },
+  { id: "r3", name: "ENTERPRISE_ADMIN", permissions: ["read", "analyze", "admin"] },
+  { id: "r4", name: "PLATFORM_ADMIN", permissions: ["read", "analyze", "admin", "platform"] },
+]
+
+const ALL_MOCK_USERS: AdminUser[] = [
+  {
+    id: "u1",
+    email: "analyst@acme.com",
+    name: "Jane Analyst",
+    roles: ["ANALYST"],
+    tenantId: "t1",
+    tenants: [{ id: "t1", name: "Acme Capital" }],
+    status: "ACTIVE",
+    lastLogin: new Date().toISOString(),
+  },
+  {
+    id: "u2",
+    email: "admin@acme.com",
+    name: "Admin User",
+    roles: ["ENTERPRISE_ADMIN"],
+    tenantId: "t1",
+    tenants: [{ id: "t1", name: "Acme Capital" }],
+    status: "ACTIVE",
+    lastLogin: new Date(Date.now() - 86400000).toISOString(),
+  },
+  {
+    id: "u3",
+    email: "pm@beta.com",
+    name: "Portfolio Manager",
+    roles: ["ANALYST", "VIEWER"],
+    tenantId: "t2",
+    tenants: [{ id: "t2", name: "Beta Investments" }],
+    status: "ACTIVE",
+  },
+  {
+    id: "u4",
+    email: "viewer@gamma.com",
+    name: "Gamma Viewer",
+    roles: ["VIEWER"],
+    tenantId: "t3",
+    tenants: [{ id: "t3", name: "Gamma Research" }],
+    status: "ACTIVE",
+    lastLogin: new Date(Date.now() - 172800000).toISOString(),
+  },
+  {
+    id: "u5",
+    email: "deactivated@acme.com",
+    name: "Deactivated User",
+    roles: ["VIEWER"],
+    tenantId: "t1",
+    tenants: [{ id: "t1", name: "Acme Capital" }],
+    status: "DEACTIVATED",
+  },
+]
+
 export const mockUsers: Record<string, AdminUser[]> = {
-  t1: [
-    {
-      id: "u1",
-      email: "analyst@acme.com",
-      name: "Jane Analyst",
-      roles: ["ANALYST"],
-      tenantId: "t1",
-      status: "ACTIVE",
-      lastLogin: new Date().toISOString(),
-    },
-    {
-      id: "u2",
-      email: "admin@acme.com",
-      name: "Admin User",
-      roles: ["ENTERPRISE_ADMIN"],
-      tenantId: "t1",
-      status: "ACTIVE",
-      lastLogin: new Date(Date.now() - 86400000).toISOString(),
-    },
-  ],
-  t2: [
-    {
-      id: "u3",
-      email: "pm@beta.com",
-      name: "Portfolio Manager",
-      roles: ["ANALYST", "VIEWER"],
-      tenantId: "t2",
-      status: "ACTIVE",
-    },
-  ],
-  t3: [],
+  t1: ALL_MOCK_USERS.filter((u) => u.tenantId === "t1"),
+  t2: ALL_MOCK_USERS.filter((u) => u.tenantId === "t2"),
+  t3: ALL_MOCK_USERS.filter((u) => u.tenantId === "t3"),
 }
+
+export function getMockUsersResponse(params: AdminUsersParams = {}): AdminUsersResponse {
+  let items = [...ALL_MOCK_USERS]
+  if (params.tenantId) {
+    items = items.filter((u) => u.tenantId === params.tenantId)
+  }
+  if (params.roleId) {
+    const roleName = mockRoles.find((r) => r.id === params.roleId)?.name ?? params.roleId
+    items = items.filter((u) => (u.roles ?? []).includes(roleName))
+  }
+  if (params.status) {
+    const status = params.status.toUpperCase()
+    items = items.filter((u) => u.status === status)
+  }
+  if (params.q) {
+    const q = params.q.toLowerCase()
+    items = items.filter(
+      (u) =>
+        u.email?.toLowerCase().includes(q) ||
+        u.name?.toLowerCase().includes(q)
+    )
+  }
+  const page = params.page ?? 1
+  const pageSize = params.pageSize ?? 25
+  const start = (page - 1) * pageSize
+  const paginated = items.slice(start, start + pageSize)
+  return {
+    items: paginated,
+    count: items.length,
+    page,
+    pageSize,
+  }
+}
+
+/** Mock user audit events for Admin User Management */
+export const mockUserAuditEvents: UserAuditEvent[] = [
+  {
+    id: "ae1",
+    actor_id: "admin-1",
+    actor_email: "admin@gbox360.com",
+    action: "user_deactivated",
+    target_type: "user",
+    target_id: "u5",
+    timestamp: new Date(Date.now() - 3600000).toISOString(),
+    payload: { reason: "Requested by HR" },
+  },
+  {
+    id: "ae2",
+    actor_id: "admin-1",
+    actor_email: "admin@gbox360.com",
+    action: "invitation_created",
+    target_type: "invitation",
+    target_id: "inv-1",
+    timestamp: new Date(Date.now() - 7200000).toISOString(),
+    payload: { email: "newuser@acme.com", tenantId: "t1" },
+  },
+  {
+    id: "ae3",
+    actor_id: "u2",
+    actor_email: "admin@acme.com",
+    action: "role_assigned",
+    target_type: "user",
+    target_id: "u1",
+    timestamp: new Date(Date.now() - 86400000).toISOString(),
+    payload: { roleId: "r2", tenantId: "t1" },
+  },
+]

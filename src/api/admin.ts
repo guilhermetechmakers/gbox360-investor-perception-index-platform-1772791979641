@@ -8,11 +8,13 @@ import { api } from "@/lib/api"
 import {
   mockDashboardHealth,
   mockAuditLogs,
-  mockUsers,
   mockReplayHealth,
   mockReplayJobs,
   mockAuditLogsPreview,
+  mockRoles,
+  mockUserAuditEvents,
   getMockPreflight,
+  getMockUsersResponse,
 } from "@/lib/admin-mock"
 import type {
   AuditLog,
@@ -25,7 +27,11 @@ import type {
   Replay,
   Tenant,
   AdminUser,
+  AdminRole,
+  AdminUsersParams,
+  AdminUsersResponse,
   InviteUserInput,
+  UserAuditEvent,
   ReplayHealth,
   PreflightResult,
   ReplayJob,
@@ -34,6 +40,28 @@ import type {
 
 const safeArray = <T>(data: T[] | null | undefined): T[] =>
   Array.isArray(data) ? data : []
+
+function getTenantNames(u: AdminUser): string {
+  const tenants = u.tenants ?? []
+  return tenants
+    .map((t) => ("tenantName" in t ? t.tenantName : "name" in t ? (t as { name?: string }).name : ""))
+    .filter(Boolean)
+    .join(";") || u.tenantId ?? ""
+}
+
+function usersToCSV(users: AdminUser[]): string {
+  const headers = ["id", "email", "name", "roles", "tenant", "status", "lastLogin"]
+  const rows = (users ?? []).map((u) => [
+    u.id,
+    u.email ?? "",
+    u.name ?? "",
+    (u.roles ?? []).join(";"),
+    getTenantNames(u),
+    u.status ?? "",
+    u.lastLogin ?? "",
+  ])
+  return [headers.join(","), ...rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))].join("\n")
+}
 
 export const adminApi = {
   checkAccess: async (): Promise<{ allowed: boolean; roles?: string[] }> => {
@@ -165,20 +193,47 @@ export const adminApi = {
     }
   },
 
-  getUsers: async (tenantId: string): Promise<AdminUser[]> => {
+  getUsers: async (params: AdminUsersParams = {}): Promise<AdminUsersResponse> => {
     try {
-      const res = await api.get<{ users?: AdminUser[] } | AdminUser[]>(
-        `/admin/users?tenantId=${encodeURIComponent(tenantId)}`
+      const q = new URLSearchParams()
+      if (params.tenantId) q.set("tenantId", params.tenantId)
+      if (params.roleId) q.set("roleId", params.roleId)
+      if (params.status) q.set("status", params.status)
+      if (params.q) q.set("q", params.q)
+      if (params.page != null) q.set("page", String(params.page))
+      if (params.pageSize != null) q.set("pageSize", String(params.pageSize))
+      const query = q.toString()
+      const res = await api.get<AdminUsersResponse | { users?: AdminUser[]; items?: AdminUser[] }>(
+        `/admin/users${query ? `?${query}` : ""}`
       )
-      const raw = (res as { users?: AdminUser[] })?.users ?? (res as AdminUser[])
+      const r = res as AdminUsersResponse & { users?: AdminUser[]; items?: AdminUser[] }
+      const rawItems = safeArray(r?.items ?? r?.users)
+      if (rawItems.length > 0 || (r?.count !== undefined && r?.count === 0)) {
+        return {
+          items: rawItems as AdminUser[],
+          count: r?.count ?? rawItems.length,
+          page: r?.page ?? params.page ?? 1,
+          pageSize: r?.pageSize ?? params.pageSize ?? 25,
+        }
+      }
+    } catch {
+      /* fall through to mock */
+    }
+    return getMockUsersResponse(params)
+  },
+
+  getRoles: async (): Promise<AdminRole[]> => {
+    try {
+      const res = await api.get<{ roles?: AdminRole[] } | AdminRole[]>("/admin/roles")
+      const raw = (res as { roles?: AdminRole[] })?.roles ?? (res as AdminRole[])
       return safeArray(raw)
     } catch {
-      return (mockUsers[tenantId] as AdminUser[]) ?? []
+      return mockRoles
     }
   },
 
   inviteUser: async (input: InviteUserInput): Promise<{ id: string }> => {
-    const res = await api.post<{ id: string }>("/admin/users/invite", input)
+    const res = await api.post<{ id: string }>("/admin/invitations", input)
     return res ?? { id: "" }
   },
 
@@ -187,7 +242,57 @@ export const adminApi = {
   },
 
   reactivateUser: async (id: string): Promise<void> => {
-    await api.post(`/admin/users/${id}/reactivate`, {})
+    await api.post(`/admin/users/${id}/activate`, {})
+  },
+
+  getUserAuditTrail: async (params: {
+    targetType?: "user"
+    targetId?: string
+    page?: number
+    pageSize?: number
+  } = {}): Promise<{ items: UserAuditEvent[]; count: number }> => {
+    try {
+      const q = new URLSearchParams()
+      if (params.targetType) q.set("targetType", params.targetType)
+      if (params.targetId) q.set("targetId", params.targetId)
+      if (params.page != null) q.set("page", String(params.page))
+      if (params.pageSize != null) q.set("pageSize", String(params.pageSize))
+      const query = q.toString()
+      const res = await api.get<{ data?: UserAuditEvent[]; items?: UserAuditEvent[]; count?: number }>(
+        `/admin/audit${query ? `?${query}` : ""}`
+      )
+      const raw = safeArray(res?.items ?? res?.data)
+      return { items: raw, count: res?.count ?? raw.length }
+    } catch {
+      return { items: mockUserAuditEvents, count: mockUserAuditEvents.length }
+    }
+  },
+
+  resetPassword: async (id: string): Promise<void> => {
+    await api.post(`/admin/users/${id}/reset-password`, {})
+  },
+
+  exportUsers: async (params: AdminUsersParams & { format?: "csv" | "json" }): Promise<{ url: string }> => {
+    try {
+      const q = new URLSearchParams()
+      if (params.tenantId) q.set("tenantId", params.tenantId)
+      if (params.roleId) q.set("roleId", params.roleId)
+      if (params.status) q.set("status", params.status)
+      if (params.q) q.set("q", params.q)
+      if (params.format) q.set("format", params.format)
+      const query = q.toString()
+      const res = await api.get<{ url: string }>(`/admin/users/export${query ? `?${query}` : ""}`)
+      if (res?.url) return res
+    } catch {
+      /* fall through to mock */
+    }
+    const { items } = await getMockUsersResponse(params)
+    const format = params.format ?? "csv"
+    const blob = format === "json"
+      ? new Blob([JSON.stringify(items, null, 2)], { type: "application/json" })
+      : new Blob([usersToCSV(items)], { type: "text/csv" })
+    const url = URL.createObjectURL(blob)
+    return { url }
   },
 
   triggerReplay: async (id: string): Promise<Replay> => {
